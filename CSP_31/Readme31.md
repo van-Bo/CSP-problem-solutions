@@ -48,8 +48,80 @@ int main()
 
 # Q2 坐标变换（其二）
 ## 算法思路
+- 针对二维坐标进行拉伸、旋转的操作，可以使用矩阵乘法来进行模拟
+- 注意这里并没有针对二维坐标的平移操作，若存在，则矩阵要拓展至齐次坐标的形式（CG）
+- 考虑每次询问时，所针对的是操作序列中的一个区间，故引出逆矩阵的使用，2x2 逆矩阵公式要会
+- 使用前缀和处理操作序列，此时的操作是由累加效果的
+- 记矩阵 M 的逆矩阵（如果存在逆矩阵的话）为 `IM(M)`，最终的操作矩阵为 `IM(op[l - 1]) * op[r]`
+- 在题解中并没有针对矩阵是否可逆进行判定和处理，感觉给定的数据定有解（感觉后续的在 CSP 官网评测系统中无法通过的数据点应该是出在此处）
+- 该题解可以通过 AcWing 官网评测系统下 (10/10) 的数据点，CSP 官网评测系统下的得分为 80 分，通过 (16/20) 的数据点
 ```C++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+#include <math.h>
 
+using namespace std;
+const int N = 1e+5 + 10;
+
+int n, m;
+struct Matrix
+{
+    double x11, x12, x21, x22;
+}op[N];
+
+Matrix cal(Matrix a, Matrix b)
+{
+    Matrix res;
+    res.x11 = a.x11 * b.x11 + a.x12 * b.x21;
+    res.x12 = a.x11 * b.x12 + a.x12 * b.x22;
+    res.x21 = a.x21 * b.x11 + a.x22 * b.x21;
+    res.x22 = a.x21 * b.x12 + a.x22 * b.x22;
+    return res;
+}
+
+int main()
+{
+    scanf("%d%d", &n, &m);
+    op[0] = {1, 0, 0, 1};
+    for (int i = 1; i <= n; i ++)
+    {
+        int x;
+        double v;
+        scanf("%d%lf", &x, &v);
+        
+        if (x == 1)
+            op[i] = {v, 0, 0, v};
+        else if (x == 2)
+            op[i] = {cos(v), -sin(v), sin(v), cos(v)};
+    }
+    
+    for (int i = 1; i <= n; i ++)
+        op[i] = cal(op[i], op[i - 1]);
+    
+    for (int i = 1; i <= m; i ++)
+    {
+        int l, r;
+        double x, y;
+        scanf("%d%d%lf%lf", &l, &r, &x, &y);
+        
+        Matrix finalOp;
+        Matrix t = op[l - 1];
+        double d = t.x11 * t.x22 - t.x12 * t.x21;
+        
+        finalOp.x11 = t.x22 / d;
+        finalOp.x12 = -t.x12 / d;
+        finalOp.x21 = -t.x21 / d;
+        finalOp.x22 = t.x11 / d;
+        
+        finalOp = cal(finalOp, op[r]);
+        
+        double resX = finalOp.x11 * x + finalOp.x12 * y;
+        double resY = finalOp.x21 * x + finalOp.x22 * y;
+        printf("%.3lf %.3lf\n", resX, resY);
+    }
+    return 0;
+}
 ```
 
 # Q3 梯度求解
