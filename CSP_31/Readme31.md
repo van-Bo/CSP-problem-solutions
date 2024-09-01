@@ -153,6 +153,7 @@ int main()
 #include <iostream>
 #include <cstring>
 #include <algorithm>
+#include <vector>
 #include <sstream>
 #include <stack>
 
