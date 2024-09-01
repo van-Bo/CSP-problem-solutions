@@ -4,8 +4,46 @@
 
 # Q1 坐标变换（其一）
 ## 算法思路
+- 针对点坐标进行平移操作
+- 操作处理使用前缀和，此处的数据范围较小，暴力操作也可
+- 该题解可以通过 AcWing 官网评测系统下 (10/10) 的数据点，CSP 官网评测系统下的得分为 100 分
 ```C++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
 
+#define x first
+#define y second
+
+using namespace std;
+typedef pair<int, int> PII;
+const int N = 110;
+
+int n, m;
+PII op[N], point[N];
+
+int main()
+{
+    scanf("%d%d", &n, &m);
+    for (int i = 1 ;i <= n; i ++)
+        scanf("%d%d", &op[i].x, &op[i].y);
+    for (int i = 1; i <= m; i ++)
+        scanf("%d%d", &point[i].x, &point[i].y);
+        
+    for (int i = 1; i <= n; i ++)
+    {
+        op[i].x += op[i - 1].x;
+        op[i].y += op[i - 1].y;
+    }
+    
+    for (int i = 1; i <= m; i ++)
+    {
+        int x = point[i].x + op[n].x;
+        int y = point[i].y + op[n].y;
+        printf("%d %d\n", x, y);
+    }
+    return 0;
+}
 ```
 
 # Q2 坐标变换（其二）
@@ -21,7 +59,7 @@
 - 其中`f[0]`表示该乘积项的系数，`f[i]`表示变量 $x_i$ 的次数值
 - 对于任意的一个多项式即为乘积项的一维数组，使用`vector<vector<int>> formula`的类型存储数据
 - 根据读入的后缀表达式，每一次的栈操作便是多项式层面的计算
-- 该题解可以通过 AcWing 官网评测系统下 (12/12) 的数据点，CSP 官网评测系统下得分为 100分
+- 该题解可以通过 AcWing 官网评测系统下 (12/12) 的数据点，CSP 官网评测系统下得分为 100 分
 ## 多项式处理
 - 多项式的加法，将两个多项式的乘积项叠加即可
 - 多项式的减法，将后一个多项式的每一个乘积项的系数变成相反数，再进行多项式的加法即可
