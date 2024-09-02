@@ -51,7 +51,7 @@ int main()
 - 针对二维坐标进行拉伸、旋转的操作，可以使用矩阵乘法来进行模拟
 - 注意这里并没有针对二维坐标的平移操作，若存在，则矩阵要拓展至齐次坐标的形式（CG）
 - 考虑每次询问时，所针对的是操作序列中的一个区间，故引出逆矩阵的使用，2x2 逆矩阵公式要会
-- 使用前缀和处理操作序列，此时的操作是由累加效果的
+- 使用前缀和处理操作序列，此时的操作是由累积效果的
 - 记矩阵 M 的逆矩阵（如果存在逆矩阵的话）为 `IM(M)`，最终的操作矩阵为 `IM(op[l - 1]) * op[r]`
 - 在题解中并没有针对矩阵是否可逆进行判定和处理，感觉给定的数据定有解（感觉后续的在 CSP 官网评测系统中无法通过的数据点应该是出在此处）
 - 该题解可以通过 AcWing 官网评测系统下 (10/10) 的数据点，CSP 官网评测系统下的得分为 80 分，通过 (16/20) 的数据点
@@ -118,6 +118,76 @@ int main()
         
         double resX = finalOp.x11 * x + finalOp.x12 * y;
         double resY = finalOp.x21 * x + finalOp.x22 * y;
+        printf("%.3lf %.3lf\n", resX, resY);
+    }
+    return 0;
+}
+```
+## 算法思路
+- 旋转操作 `rotate`与拉伸操作 `scale`，最终坐标变换的结果与两类操作的先后顺序无关
+- 前缀和处理累积的变换操作，旋转角度可以累加，拉伸系数可以累乘
+- 该题解可以通过 AcWing 官网评测系统下 (10/10) 的数据点，CSP 官网评测系统下的得分为 100 分
+```C++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+#include <math.h>
+
+using namespace std;
+const int N = 1e+5 + 10;
+const double esp = 1e-5;
+
+int n, m;
+double scale[N], rot[N];
+
+int main()
+{
+    scanf("%d%d", &n, &m);
+    
+    // 读入操作
+    scale[0] = 1.0;
+    for (int i = 1; i <= n; i ++)
+    {
+        int id;
+        double v;
+        scanf("%d%lf", &id, &v);
+        
+        if (id == 1) 
+        {
+            scale[i] = v;
+            rot[i] = 0;
+        }
+        else if (id == 2)
+        {
+            scale[i] = 1.0;
+            rot[i] = v;
+        }
+    }
+    
+    // 前缀和处理
+    for (int i = 1; i <= n; i ++)
+    {
+        scale[i] *= scale[i - 1];
+        rot[i] += rot[i - 1];
+    }
+    
+    // 查询处理
+    for (int i = 1; i <= m; i ++)
+    {
+        int l, r;
+        double x, y;
+        
+        scanf("%d%d%lf%lf", &l, &r, &x, &y);
+        
+        // scale
+        x *= scale[r] / scale[l - 1];
+        y *= scale[r] / scale[l - 1];
+        
+        // rotate
+        double resX, resY;
+        resX = x * cos(rot[r] - rot[l - 1]) - y * sin(rot[r] - rot[l - 1]);
+        resY = x * sin(rot[r] - rot[l - 1]) + y * cos(rot[r] - rot[l - 1]);
+        
         printf("%.3lf %.3lf\n", resX, resY);
     }
     return 0;
@@ -321,9 +391,99 @@ int main()
     return 0;
 }
 ```
+## 算法思路
+- 针对前四个数据点进行分类讨论（骗分）
+- 第 1、2 个数据点中变量只有 `x1`，表达式中仅含有一个元素，所以在此数据点下，仅会存在两种情况。其一，唯一的元素是变量 `x1`，该表达式的偏导、代值结果定为 1。其二，唯一的元素是常数，该表达式的偏导、代值结果定为 0。
+- 第 3、4 个数据点中仅含有一个运算符，所以分类讨论的第一层便是针对运算符，其次分类讨论具体的运算值是变量 `x1`，还是常数即可
+- 该题解可以通过 AcWing 评测官网下 (2/12) 的数据点，CSP 官网评测系统的得分为 40 分
+```C++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+#include <sstream>
+#include <vector>
+
+using namespace std;
+
+int n, m;
+
+void print(int v)
+{
+    for (int i = 1; i <= m; i ++)
+        printf("%d\n", v);
+}
+
+int main()
+{
+    scanf("%d%d", &n, &m);
+    cin.get();
+    
+    string strLine;
+    getline(cin, strLine);
+    
+    stringstream oss(strLine);
+    
+    string s;
+    vector<string> op;
+    while (oss >> s)
+    {
+        op.push_back(s);
+        if (op.size() == 3) break;
+    }
+    
+    if (op.size() == 1)
+    {
+        if (op[0] == "x1")
+            print(1);
+        else 
+            print(0);
+    }
+    else if (op.size() == 3)
+    {
+        if (op[2] == "+") // add
+        {
+            int cnt = 0;
+            if (op[0] == "x1") cnt ++;
+            if (op[1] == "x1") cnt ++;
+            
+            print(cnt);
+        }
+        else if (op[2] == "-") // sub
+        {
+            int res;
+            if (op[0] == "x1" && op[1] != "x1") res = 1;
+            else if (op[0] == "x1" && op[1] == "x1") res = 0;
+            else if (op[0] != "x1" && op[1] == "x1") res = -1;
+            else res = 0;
+            
+            print(res);
+        }
+        else if (op[2] == "*") // mul
+        {
+            if (op[0] == "x1" && op[1] != "x1")
+                print(stoi(op[1]));
+            else if (op[0] != "x1" && op[1] == "x1")
+                print(stoi(op[0]));
+            else if (op[0] == "x1" && op[1] == "x1")
+            {
+                for (int i = 1; i <= m; i ++)
+                {
+                    int id, v;
+                    scanf("%d%d", &id, &v);
+                    printf("%d\n", v * 2);
+                }
+            }
+            else
+                print(0);
+        }
+    }
+    return 0;
+}
+```
 
 # Q4 阴阳龙
 ## 算法思路
+- 开辟网格矩阵存储员工的位置
 ```C++
 
 ```
