@@ -481,9 +481,122 @@ int main()
 }
 ```
 
-# Q4 阴阳龙
+# Q4 阴阳龙（Hack）
 ## 算法思路
-- 开辟网格矩阵存储员工的位置
+- 开辟网格矩阵存储员工的位置，此时的网格矩阵大小为 1010x1010
+- 本题的坐标位置有点特殊，坐标原点 `(1, 1)` 在左下角，给定的参数 `n` 和 `m`，表示网格矩阵有 n 列，m 行，其中横坐标值 `x` 的上界为 `n`，纵坐标值 `y` 的上界为 `m`，`g[x][y] = id` 表示 位置 `(x, y)` 存在员工，员工的编号为 `id`
+- 对于每个网格的记录值，若对应的位置无员工，则记录值为 0；若对应的位置有员工，则记录值为该员工的编号
+- `k2` 的上界值是阴阳龙出现的位置到边界的最小步长
+- 在 $1 \leqslant k \leqslant k2$ 的范围内选择可以成功搜索到员工步长的最小值，若搜索不到，则 `k` 值为 0
+- 确定 `k` 后，按照要求修改坐标即可（位置转移后，原先位置的编号信息要清零）
+- 完成 `q` 组数据处理后，遍历整个网格矩阵，输出累异或的结果值
+- 时间复杂度：$10^5 \times (5 \times 10^2 \times 8)$，感觉刚好卡在边界，可以过掉目标数据点
+- 该题解可以通过 AcWing 官网评测系统 (5/11) 的数据点，CSP 官网评测系统下得分为 40 分
 ```C++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+#include <vector>
+#include <unordered_map>
+
+#define x first
+#define y second
+
+using namespace std;
+typedef pair<int, int> PII;
+const int N = 1010;
+
+int n, m, p, q; // n列 m行
+
+int dx[] = {1, 1, 0, -1, -1, -1, 0, 1};
+int dy[] = {0, 1, 1, 1, 0, -1, -1, -1};
+
+int g[N][N];
+
+int main()
+{
+    scanf("%d%d%d%d", &n, &m, &p, &q);
+    for (int i = 1; i <= p; i ++)
+    {
+        int x, y;
+        scanf("%d%d", &x, &y);
+        g[x][y] = i;
+    }
+    
+    if (n > 1000 || m > 1000) return 0;
+    
+    while (q --)
+    {
+        int x, y, t;
+        scanf("%d%d%d", &x, &y, &t);
+        
+        // 确定 k2 范围
+        int k2 = min(y - 1, min(m - y, min(n - x, x - 1)));
+        
+        // k1、k2 求交，确定 k
+        int k = -1;
+        vector<PII> points;
+        unordered_map<int, int> pr;
+        for (int i = 1; i <= k2; i ++)  // i 为步长
+        {
+            for (int j = 0; j < 8; j ++)    // j 为方向
+            {
+                int a = x + dx[j] * i, b = y + dy[j] * i;
+                if (g[a][b])
+                {
+                    points.push_back({a, b});
+                    pr[b * n + a] = j;   
+                }
+            }
+            if(points.size() > 0) 
+            {
+                k = i;
+                break;
+            }
+        }
+        if (k == -1) k = 0;
+        
+        if (k)
+        {
+            // 变换坐标
+            vector<PII> location;
+            vector<int> changes;
+            for (auto p : points)
+            {
+                int a = p.x, b = p.y;
+                int id = g[a][b];
+                g[a][b] = 0;    // HINT point 
+                
+                int newX = x + k * dx[(pr[b * n + a] + t) % 8];
+                int newY = y + k * dy[(pr[b * n + a] + t) % 8];
+                
+                location.push_back({newX, newY});
+                changes.push_back(id);
+            }
+            
+            int sz = location.size();
+            for (int i = 0; i < sz; i ++)
+                g[location[i].x][location[i].y] = changes[i];
+        }
+    }
+    
+    // 输出异或值
+    int res = 0;
+    for (int i = 1; i <= n; i ++)
+        for (int j = 1; j <= m; j ++)
+        {
+            if (g[i][j])
+                res = res ^ (i * g[i][j] + j);
+        }
+    printf("%d\n", res);
+    return 0;
+}
+```
+
+# Q5 阻击
+## 算法思路
+
+```C++
+
 
 ```
