@@ -1,6 +1,6 @@
 > 第31次CCF计算机软件能力认证
-> 模拟认证CSP（）
-> 模拟认证AcWing（）
+> 模拟认证CSP（100 + 100 + 100 + 40 + 4）
+> 模拟认证AcWing（(10/10), (10/10), (12/12), (5/11), ?）
 
 # Q1 坐标变换（其一）
 ## 算法思路
@@ -593,10 +593,100 @@ int main()
 }
 ```
 
-# Q5 阻击
+# Q5 阻击（Hack）
 ## 算法思路
-
+- `dfs` 暴力搜索
+- `hurt[x][y]` 表示节点 `x` 到节点 `y` 的损失，在每次输出结果前，调用 `getMaxHurt()` 获取结果，该函数会利用一个嵌套的双层 `for` 循环来遍历损失矩阵的上三角部分，同时维护最大损失值
+- `getHurt()` 用来构建损失矩阵（逐行构建），每次逐行构建调用 `dfs(u, v, cnt)` 函数来进行深搜，其中 `u` 为根节点，`v` 为遍历到的节点，`cnt` 为从 `u` 到 `v` 的损失值
+- 该题解 CSP 官网评测系统下得分为 4 分，只过掉了第一个数据点
 ```C++
+#include <iostream>
+#include <cstring>
+#include <vector>
 
+#define x first
+#define y second
 
+using namespace std;
+typedef pair<int, int> PII;
+const int N = 305;
+
+int n, m;
+int h[N], e[N], ne[N], edgeID[N], idx;
+PII edge[N];
+bool st[N];
+
+int hurt[N][N];
+int res;
+
+void add(int u, int v, int k)
+{
+    edgeID[idx] = k, e[idx] = v, ne[idx] = h[u], h[u] = idx ++; 
+}
+
+void dfs(int u, int v, int cnt)
+{
+    st[v] = true;
+    for (int i = h[v]; ~i; i = ne[i])
+    {
+        int j = e[i], id = edgeID[i];
+        if (st[j]) continue;
+
+        hurt[u][j] = cnt + (edge[id].y - edge[id].x);
+        dfs(u, j, hurt[u][j]);
+    }
+}
+
+void getHurt()
+{
+    for (int start = 1; start <= n; start ++)
+    {
+        memset(st, 0, sizeof st);
+        dfs(start, start, 0);
+    }
+}
+
+int getMaxHurt()
+{
+    int res = 0;
+    for (int i = 1; i <= n; i ++)
+        for (int j = i + 1; j <= n; j ++)
+            if (res < hurt[i][j])
+                res = hurt[i][j];
+    return res;
+}
+
+int main()
+{
+    scanf("%d%d", &n, &m);
+
+    if (n > 300 || m > 300) return 0;
+
+    memset(h, -1, sizeof h);
+    for (int i = 1; i <= n - 1; i ++)
+    {
+        int u, v, w, b;
+        scanf("%d%d%d%d", &u, &v, &w, &b);
+
+        edge[i] = {w, b};
+        add(u, v, i), add(v, u, i);
+    }
+
+    getHurt();
+    res = getMaxHurt();
+    printf("%d\n", res);
+
+    while (m --)
+    {
+        int x, y;
+        scanf("%d%d", &x, &y);
+        edge[x].x = y;
+
+        memset(hurt, 0, sizeof hurt);
+        getHurt();
+        res = getMaxHurt();
+        printf("%d\n", res);
+    }
+    return 0;
+}
 ```
