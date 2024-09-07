@@ -308,8 +308,142 @@ int main()
 }
 ```
 
-# Q3 解压缩
+# Q3 解压缩(Hack)
 ## 算法思路
+- 按照题意思路模拟，仅能处理 40% 的输入，其中此 40% 输入数据的特点是仅含有字面量
+- 该题解可以通过 AcWing 官网评测系统下 (0/11) 的数据点，CSP 官网评测系统下得分为 40 分
 ```C++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+#include <unordered_map>
 
+#define x first
+#define y second
+
+using namespace std;
+typedef pair<int, int> PII;
+
+int n;
+string msg;
+string dataMsg;
+
+// 16 进制字符与 10 进制数据值的映射关系
+unordered_map<char, int> pr = {
+    {'0', 0}, {'1', 1}, {'2', 2}, {'3', 3}, 
+    {'4', 4}, {'5', 5}, {'6', 6}, {'7', 7},
+    {'8', 8}, {'9', 9}, {'a', 10}, {'b', 11},
+    {'c', 12}, {'d', 13}, {'e', 14}, {'f', 15}
+};
+
+int getPower(int x, int e)
+{
+    int res = 1; 
+    for (int i = 1; i <= e; i ++)
+        res *= x;
+    return res;
+}
+
+PII getLeadData(int st)
+{
+    int edPostion = -1, dataSize = 0;
+    int pos = st, base = 0;
+    while (true)
+    {
+        char h4bit = msg[pos ++];
+        char l4bit = msg[pos ++];
+        int hv = pr[h4bit], lv = pr[l4bit];
+        // printf("hv: %d  lv: %d\n", hv, lv);
+        
+        bool isBreak = false;
+        if (hv < 8) isBreak = true;
+        
+        if (hv >= 8) dataSize += ((hv - 8) * 16 + lv) * getPower(128, base);
+        else dataSize += (hv * 16 + lv) * getPower(128, base);
+        
+        base ++;
+        if (isBreak) break;
+    }
+    
+    edPostion = pos;
+    return {edPostion, dataSize};
+}
+
+int main()
+{
+    scanf("%d", &n);
+    
+    int line = (n + 7) / 8;
+    while (line --)
+    {
+        string s;
+        cin >> s;
+        msg += s;
+    }
+    
+    int len = msg.length();
+    for (int i = 0; i < len; i ++)
+    {
+        // 处理导引域
+        PII t = getLeadData(i);
+        
+        // 处理数据域
+        int scanDataSize = 0;
+        for (int j = t.x; j < len; j ++)
+        {
+            int hv = pr[msg[j ++]];
+            int lv = pr[msg[j ++]];
+            
+            int index = (hv * 16 + lv) / 4;
+            
+            if (index <= 59)    // 字面量数据字节数不超过 60
+            {
+                int byteNum = index + 1;
+                dataMsg += msg.substr(j, byteNum * 2);
+                scanDataSize += byteNum;
+                
+                j += byteNum * 2;
+            }
+            else    // 数据字节数超过 60
+            {
+                int sizeByteNum = index - 59;
+                int byteNum = 0;
+                for (int k = 0; k < sizeByteNum; k ++)
+                {
+                    int h = pr[msg[j ++]];
+                    int l = pr[msg[j ++]];
+                    byteNum += (h * 16 + l) * getPower(256, k);
+                }
+                
+                byteNum += 1;
+                dataMsg += msg.substr(j, byteNum * 2);
+                scanDataSize += byteNum;
+                
+                j += byteNum * 2;
+            }
+            
+            if (scanDataSize >= t.y)
+            {
+                i = j - 1;
+                break;
+            }
+            else 
+                j -= 1;
+        }
+    }
+    
+    int dataLen = dataMsg.length();
+    int mark = 0;
+    for (int i = 0; i < dataLen; i ++)
+    {
+        mark ++;
+        printf("%c", dataMsg[i]);
+        if (mark == 16)
+        {
+            mark = 0;
+            puts("");
+        }
+    }
+    return 0;
+}
 ```
