@@ -22,8 +22,175 @@
 
 # Q4 星际网络Ⅱ
 ## 算法思路
+- 操作类型有 3 种，函数 `deal1`、`deal2`、`deal3` 分别实现针对不同操作数 `op` 的处理
+- 针对 16 进制形式的地址（形式为：xxxx:xxxx），使用 `string` 存储
+- 哈希表 `unordered_map<string, int> adr`存储地址和用户的相关信息，`adr[p] = id` 表示地址 `p` 已经分配给了用户 `id` 
+- `getNextAdr(p)` 实现地址 `p` 的自增
+- `deal1()` 函数中，`cntNullAdr` 统计给定地址区间中未分配地址的个数，`cntTotalAdr` 统计给定地址区间中总的地址个数，`cntIdAdr` 统计给定地址区间中已分配给用户 `id` 的地址个数；检测成功的条件有两种（程序中有注释标注），满足一种即可，若都不满足，则检测失败
+- `deal2()` 函数处理简单，和哈希表定义的意义完全吻合
+- `deal3()` 函数要判定给定的地址区间是否完整的分配给了某用户，判定为否的情况有两种，分别对应 `break` 的出口；其一，出现了未分配的地址，其二，地址分配用户不唯一
+- 时间复杂度：$O(q \times 2^n)$
+- 该题解可以通过 AcWing 官网 (5/21) 的数据点，CSP 官网评测系统下得分为 20 分
 ```C++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+#include <unordered_map>
+#include <unordered_set>
 
+using namespace std;
+typedef long long LL;
+unordered_map<string, int> adr; // address -> user
+
+int n, q;
+
+string getNextAdr(string p)
+{
+    int len = p.length();
+    
+    for (int i = len - 1; i >= 0; i --)
+    {
+        if (p[i] == ':') continue;
+        
+        if (p[i] >= '0' && p[i] <= '8')
+        {
+            p[i] = p[i] + 1;
+            break;
+        }
+        else if (p[i] == '9')
+        {
+            p[i] = 'a';
+            break;
+        }
+        else if (p[i] >= 'a' && p[i] <= 'e')
+        {
+            p[i] = p[i] + 1;
+            break;
+        }
+        else if (p[i] == 'f')
+        {
+            p[i] = '0';
+        }
+    }
+    return p;
+}
+
+void deal1()
+{
+    int id;
+    string l, r;
+    scanf("%d", &id);
+    cin >> l >> r;
+    
+    string p = l;   //working point
+    LL cntNullAdr = 0, cntTotalAdr = 0;
+    unordered_set<string> nullAdr;
+    LL cntIdAdr = 0;
+    while (true)
+    {
+        cntTotalAdr ++;
+        if (adr.find(p) != adr.end())   // 地址 p 已分配给了某用户
+        {
+            if (adr[p] == id)
+                cntIdAdr ++;
+        }
+        else    // 地址 p 未被分配
+        {
+            nullAdr.insert(p);
+            cntNullAdr ++;
+        }
+        
+        if (p == r) break;
+        else
+            p = getNextAdr(p);
+    }
+    
+    if (cntNullAdr == cntTotalAdr)  //l-r 的地址均未分配
+    {
+        for (auto t : nullAdr)
+            adr[t] = id;
+            
+        printf("YES\n");
+    }
+    else if (cntNullAdr && (cntTotalAdr - cntNullAdr) == cntIdAdr)// l-r 存在空地址，非空地址用户均为 id
+    {
+        for (auto t : nullAdr)
+            adr[t] = id;
+        printf("YES\n");
+    }
+    else 
+        printf("NO\n");
+}
+
+void deal2()
+{
+    string s;
+    cin >> s;
+    
+    if (adr.find(s) != adr.end())
+        printf("%d\n", adr[s]);
+    else 
+        printf("0\n");
+}
+
+void deal3()
+{
+    string l, r;
+    cin >> l >> r;
+    
+    string p = l;
+    int userId = -1;
+    bool isOnlyUser = true;
+    while (true)
+    {
+        if (adr.find(p) == adr.end())   // 地址 p 未被分配
+        {
+            isOnlyUser = false;
+            break;
+        }
+
+        if (userId == -1 && adr.find(p) != adr.end())
+        {
+            userId = adr[p];
+        }
+        else if (userId != -1 && adr.find(p) != adr.end())
+        {
+            if (adr[p] != userId)
+            {
+                isOnlyUser = false;
+                break;
+            }
+        }
+        
+        if (p == r) break;
+        else
+            p = getNextAdr(p);
+    }
+    
+    if (isOnlyUser)
+        printf("%d\n", userId);
+    else 
+        printf("0\n");
+}
+
+int main()
+{
+    scanf("%d%d", &n, &q);
+    
+    while (q --)
+    {
+        int op;
+        scanf("%d", &op);
+        
+        if (op == 1)
+            deal1();
+        else if (op == 2)
+            deal2();
+        else if (op == 3) 
+            deal3();
+    }
+    return 0;
+}
 ```
 
 # Q5 施肥
