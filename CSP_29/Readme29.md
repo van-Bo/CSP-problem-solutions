@@ -1,23 +1,266 @@
 > 第29次CCF计算机软件能力认证
-> 模拟认证 CSP（）
-> 模拟认证 AcWing（）
+> 模拟认证 CSP（100 + 100 + 20 + 20 + 35）
+> 模拟认证 AcWing（(10/10), (11/11), (1/10), (5/21), (8/21)）
 
 # Q1 田地丈量
 ## 算法思路
+- 线段求交、面积求交
+- 该题解可以通过 AcWing 官网 (10/10) 的数据点，CSP 官网评测系统下得分为 100 分
 ```C++
+#include <iostream>
+#include <algorithm>
+#include <cstring>
 
+using namespace std;
+typedef long long LL;
+
+int n, a, b;
+
+int getLine(int x, int y, int u, int v)
+{
+    return max(0, min(y, v) - max(x, u));
+}
+
+int main()
+{
+    scanf("%d%d%d", &n, &a, &b);
+    
+    LL res = 0;
+    for (int i = 0; i < n; i ++)
+    {
+        int x1, y1, x2, y2;
+        scanf("%d%d%d%d", &x1, &y1, &x2, &y2);
+        
+        res += (LL)getLine(x1, x2, 0, a) * getLine(y1, y2, 0, b);
+    }
+    printf("%lld\n", res);
+    return 0;
+}
 ```
 
 # Q2 垦田计划
 ## 算法思路
+- 二分枚举最小的耗时，每次判定遍历所有开垦区域，通过统计 `cost` 判定是否有效（该目标最小耗时能否实现）
+- 时间复杂度：$O(n \log n)$
+- 该题解可以通过 AcWing 官网 (11/11) 的数据点，CSP 官网评测系统下得分为 100 分
 ```C++
+#include <iostream>
+#include <algorithm>
+#include <cstring>
 
+using namespace std;
+typedef long long LL;
+const int N = 1e+5 + 10;
+
+int n, m, k;
+int t[N], c[N];
+
+bool check(int v)
+{
+    LL cost = 0;
+    for (int i = 0; i < n; i ++)
+    {
+        if (t[i] > v)
+            cost += (LL)(t[i] - v) * c[i];
+    }
+    return cost <= m;
+}
+
+int main()
+{
+    scanf("%d%d%d", &n, &m, &k);
+    for (int i = 0; i < n; i ++)
+        scanf("%d%d", &t[i], &c[i]);
+        
+    int l = k, r = 1e+5;
+    while (l < r)
+    {
+        int mid = (l + r) / 2;
+        if (check(mid)) r = mid;
+        else l = mid + 1;
+    }
+    printf("%d\n", l);
+    return 0;
+}
 ```
 
 # Q3 LDAP
 ## 算法思路
+- 针对处理的表达式的范式类型为：`BASE_EXPR`，`EASY_EXPR`
+- `user` 记录每个用户的标识符
+- `pr` 建立由用户的标识符到一个用于标记存储位置的下标的映射关系，此题中用户个数的上限值为 2500
+- `userAtr[x]` 记录 `x`（某一用户标识符的映射下标值）下的用户属性编号
+- `userAtrValue[x]` 记录 `x` （某一用户标识符的映射下标值）下的用户属性编号与该属性的属性值的映射关系 
+- 该题解可以通过 AcWing 官网 (1/10) 的数据（因为范式 `EXPR` 的存在，会出现针对于 `stoi()` 的 `runtime error`），CSP 官网评测系统下得分为 20 分（感觉可以通过前 40% 的数据的，不知道哪里出现了问题）
 ```C++
+#include <iostream>
+#include <algorithm>
+#include <cstring>
+#include <unordered_set>
+#include <unordered_map>
+#include <set>
 
+using namespace std;
+typedef pair<int, int> PII;
+const int N = 2505;
+
+unordered_set<int> users;   // 记录 dn
+unordered_map<int, int> pr; // 映射 dn --> index in users
+unordered_set<int> userAtr[N];
+unordered_map<int, int> userAtrValue[N];
+int n, m;
+
+set<int> getUsers(string s)
+{
+    set<int> res;
+    
+    int id, v, len = s.length();
+    char op;
+    string num = "";
+    for (int i = 0; i < len; i ++)
+    {
+        if (isdigit(s[i]))
+            num += s[i];
+        else if (s[i] == ':' || s[i] == '~')
+            id = stoi(num), num = "", op = s[i];
+    }
+    v = stoi(num);
+
+    if (op == ':')
+    {
+        for (auto u : users)
+        {
+            if(userAtr[pr[u]].find(id) != userAtr[pr[u]].end() && userAtrValue[pr[u]][id] == v)
+                res.insert(u);
+        }
+    }
+    else if (op == '~')
+    {
+        for (auto u : users)
+        {
+            if(userAtr[pr[u]].find(id) != userAtr[pr[u]].end() && userAtrValue[pr[u]][id] != v)
+                res.insert(u);
+        }
+    }
+    return res;
+}
+
+
+void deal(string s)
+{
+    if (s[0] != '&' && s[0] != '|')    // BASE_EXPR
+    {
+        auto res = getUsers(s);
+        for (auto t : res)
+            printf("%d ", t);
+        puts("");
+        
+    }
+    else    // EASY_EXPR
+    {
+        set<int> res;   // 记录结果值
+        
+        int len = s.length();
+        if (s[0] == '&')    // 结果值求交操作
+        {
+            set<int> temp;
+            string atom = "";
+            
+            for (int i = 1; i < len; i ++)
+            {
+                if (s[i] == '(') continue;
+                if (s[i] >= '0' && s[i] <= '9')
+                    atom += s[i];
+                else if (s[i] == ':' || s[i] == '~')
+                    atom += s[i];
+                else if (s[i] == ')')
+                {
+                    temp = getUsers(atom);
+                    atom = "";  // Key point
+                    
+                    if (res.size() == 0) 
+                    {
+                        res = temp;
+                        continue;
+                    }
+                    
+                    for (auto t : res)
+                    {
+                        if (temp.find(t) == temp.end())
+                            res.erase(t);
+                    }
+                }
+            }
+            
+            for (auto t : res)
+                printf("%d ", t);
+            puts("");
+        }
+        else if (s[0] == '|')   // 结果值求并操作
+        {
+            set<int> temp;
+            string atom = "";
+            for (int i = 1; i < len; i ++)
+            {
+                if (s[i] == '(') continue;
+                if (s[i] >= '0' && s[i] <= '9')
+                    atom += s[i];
+                else if (s[i] == ':' || s[i] == '~')
+                    atom += s[i];
+                else if (s[i] == ')')
+                {
+                    temp = getUsers(atom);
+                    atom = "";  // Key point
+                    
+                    if (res.size() == 0)
+                    {
+                        res = temp;
+                        continue;
+                    }
+                    
+                    for (auto t : temp)
+                    {
+                        if (res.find(t) == res.end())
+                            res.insert(t);
+                    }
+                }
+            }
+            
+            for (auto t : res)
+                printf("%d ", t);
+            puts("");
+        }
+    }
+}
+
+int main()
+{
+    scanf("%d", &n);
+    for (int i = 1; i <= n; i ++)
+    {
+        int dn, cntAtr;
+        scanf("%d%d", &dn, &cntAtr);
+        for (int j = 0; j < cntAtr; j ++)
+        {
+            int id, v;
+            scanf("%d%d", &id, &v);
+            
+            users.insert(dn);
+            pr[dn] = i;
+            userAtr[i].insert(id);
+            userAtrValue[i][id] = v;
+        }
+    }
+    
+    scanf("%d", &m);
+    for (int i = 0; i < m; i ++)
+    {
+        string s;
+        cin >> s;
+        deal(s);
+    }
+    return 0;
+}
 ```
 
 # Q4 星际网络Ⅱ
