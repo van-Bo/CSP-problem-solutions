@@ -40,8 +40,56 @@ int main()
 
 # 序列查询新解
 ## 算法思路
+- 暴力枚举
+- 二分求取 `f(x)`
+- 时间复杂度：$O(N \times \log n)$
+- 该题解可以通过 AcWing 官网 (6/11) 的数据点，CSP 官网评测系统下得分为 70 分
 ```C++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
 
+using namespace std;
+typedef long long LL;
+const int M = 1e+5 + 10;
+
+int n, N;
+int w[M];
+
+bool check(int index, int v)
+{
+    return w[index] <= v;
+}
+
+int get(int v)
+{
+    int l = 0, r = n;
+    while (l < r)
+    {
+        int mid = (l + r + 1) / 2;
+        if (check(mid, v)) l = mid;
+        else r = mid - 1;
+    }
+    return l;
+}
+
+int main()
+{
+    scanf("%d%d", &n, &N);
+    for (int i = 1; i <= n; i ++)
+        scanf("%d", &w[i]);
+    
+    int r = N /(n + 1);
+    LL res = 0;
+    for (int i = 1; i <= N - 1; i ++)
+    {
+        int f = get(i);
+        int g = i / r;
+        res += abs(f - g);
+    }
+    printf("%lld\n", res);
+    return 0;
+}
 ```
 
 # 登机牌条码
