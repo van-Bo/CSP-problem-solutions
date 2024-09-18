@@ -168,7 +168,8 @@ int main()
 - `dfs(st, preEd, ed, mx, mn)` 函数中，`st` 为枚举的起始点（深搜的中心），`ed` 为此时路径中枚举到的最后的节点，`preEd` 为 `ed` 的前一个枚举点（避免回溯），`mx` 为路径中的最大不满意程度，`mn` 为路径中的最小不满意程度
 - `dfs()` 过程中对于同一条路径，会在答案集合中重复维护，同一条路径，`i ---> j` 和 `j ---> i`，故最终经过 `dfs()` 后的答案要除以2
 - `dfs()` 过程中不会处理起始点相同的路径，故最终答案要额外添加一个节点数 `n`
-- 该题解可以通过 AcWing 官网 (5/33) 的数据点，CSP 官网评测系统下的得分为 15 分
+- 时间复杂度：$O(n \times m)$，其中 `n` 为点数，`m` 为边数
+- 该题解可以通过 AcWing 官网 (5/33) 的数据点，CSP 官网评测系统下的得分为 12 分
 ```C++
 #include <iostream>
 #include <cstring>
@@ -224,6 +225,96 @@ int main()
 }
 ```
 ## 算法思路
+- 编号为 10、11、12 的数据点拥有性质 `A2`，该性质使得图特殊化为一个星形的图，存在一个 `center` 的节点，其度数为 n - 1
+- 接下来可以线性求解（此时路径中的节点数为 2 或 3），首先明确的大前提是每一种路径的起始点为 `x` 和 `y`，并且 $x < y$，那么 `center` 节点就可能与 `x` 或 `y` 相等，也可能都不相等
+- 线性求解的逻辑是分类讨论，给定一个确定的 `x` 值，根据 `x` 与 `center` 的大小关系来确定 `y` 的合法值的范围，从而维护答案值 `ans`
+- 参考依据的不等式为：$x - k1 \leqslant min P(x, y) \leqslant max P(x, y) \leqslant y + k2$，之后根据分类的条件，会针对此不等式进行化简，从而求解 `y` 的合法值范围
+- 第一个分类条件 `x == center`，简化不等式为 $x - k1 \leqslant x \leqslant y \leqslant y + k2$，其中第 1、2、3 个 ≤ 号一定都恒成立，此时 `y` 的取值范围 `[x + 1, n]`
+- 第二个分类条件 `x < center`，简化不等式为 $x - k1 \leqslant x \leqslant max P(x, y) \leqslant y + k2$，其中第 1、2 个 ≤ 号恒成立。再次分类确定 `max P(x, y)` 的取值，若 $x + 1 \leqslant y \leqslant center$，第三个比较式简化为 $center \leqslant y + k2$，联合化简可得 $max(x + 1, center - k2) \leqslant y \leqslant center$；另一个再次分类，若 $center + 1 \leqslant y$，第三个比较式恒成立。可以将两个再次分类的结论范围合并，此时 `y` 的取值范围为 `[max(x + 1, center - k2), n]`
+- 第三个分类条件 `x > center`，简化不等式为 $x - k1 \leqslant center \leqslant y \leqslant y + k2$，其中第 2、3 个 ≤ 号恒成立，当 $center < x \leqslant center + k1$，此时 `y` 的取值范围为 `[x + 1, n]`
+- 最后添加单个节点为一条路径的结果，`ans` 的基础之上加节点数
+- 该题解可以通过 AcWing 官网 (9/33) 的数据点，CSP 官网评测系统下的得分为 24 分
 ```C++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
 
+using namespace std;
+typedef long long LL;
+const int N = 5e+5 + 10, M = N * 2;
+
+int n, k1, k2;
+int h[N], e[M], ne[M], idx;
+LL ans;
+
+int cnt[N]; // 统计节点的度数
+
+void add(int a, int b)
+{
+    e[idx] = b, ne[idx] = h[a], h[a] = idx ++;
+}
+
+void dfs(int st, int preEd, int ed, int mx, int mn)
+{
+    if (st != ed)
+    {
+        if (mn >= min(st, ed) - k1 && mx <= max(st, ed) + k2)
+            ans ++;
+    }
+    
+    for (int i = h[ed]; ~i; i = ne[i])
+    {
+        int j = e[i];
+        if (j == preEd) continue;
+        dfs(st, ed, j, max(j, mx), min(j, mn));
+    }
+}
+
+int main()
+{
+    scanf("%d%d%d", &n, &k1, &k2);
+    
+    memset(h, -1, sizeof h);
+    for (int i = 0; i < n - 1; i ++)
+    {
+        int p, c;
+        scanf("%d%d", &p, &c);
+        
+        add(p, c), add(c, p);
+        cnt[p] ++, cnt[c] ++;
+    }
+    
+    bool flag = false;
+    int center = -1;
+    for (int i = 1; i <= n; i ++)
+        if (cnt[i] == n - 1)
+            flag = true, center = i;
+    
+    if (flag)
+    {
+        for (int i = 1; i <= n; i ++)
+        {
+            if (i == center)
+                ans += n - (i + 1) + 1;
+            else if (i < center)
+                ans += n - max(i + 1, center - k2) + 1;
+            else
+            {
+                if (i <= center + k1)
+                    ans += n - (i + 1) + 1;
+            }
+        }
+        
+        printf("%lld\n", ans + n);
+    }
+    else 
+    {
+        for (int i = 1; i <= n; i ++)
+        dfs(i, i, i, i, i);
+        
+        printf("%lld\n", ans / 2 + n);
+    }
+    
+    return 0;
+}
 ```
