@@ -161,6 +161,155 @@ int main()
 
 # Q4 磁盘文件操作
 ## 算法思路
+- `unordered_map<int, PII> pr` 记录地址单元与占用程序和当前位置存储值之间的映射关系，`pr[x] = {id, v}`表示地址单元的占用程序编号为 `id`（其中程序编号值为零时，则表示无程序占用），该地址单元的存储值为 `v`
+- `unordered_map<int, int>` 记录地址单元被占用的前一个程序编号
+- 每次按照操作编号，朴素枚举即可
+- 该题解可以通过 AcWing 官网 (9/20) 的数据点，CSP 官网评测系统下的得分为 25 分
+```C++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+#include <unordered_map>
+
+#define x first
+#define y second
+
+using namespace std;
+typedef pair<int, int> PII;
+
+int n, m, k;
+unordered_map<int, PII> pr;
+unordered_map<int, int> preID;
+
+void deal0()
+{
+    int id, l, r, x;
+    scanf("%d%d%d%d", &id, &l, &r, &x);
+    
+    int mark = -1;
+    
+    for (int i = l; i <= r; i ++)
+    {
+        if (pr.find(i) != pr.end()) // 地址存在
+        {
+            if (pr[i].x == id)
+                pr[i].y = x, preID[i] = id, mark = i;
+            else if (pr[i].x == 0)
+                pr[i].x = id, pr[i].y = x, preID[i] = 0, mark = i;
+            else
+                break;
+        }
+        else
+        {
+            pr[i].x = id;
+            pr[i].y = x;
+            preID[i] = 0;
+            mark = i;
+        }
+    }
+    
+    printf("%d\n", mark);
+}
+
+void deal1()    // 删除
+{
+    int id, l, r;
+    scanf("%d%d%d", &id, &l, &r);
+    
+    bool flag = true;
+    for (int i = l; i <= r; i ++)
+    {
+        if (pr.find(i) == pr.end()) // 地址未被占用
+        {
+            flag = false;
+            break;
+        }
+        else
+        {
+            if (pr[i].x != id)
+            {
+                flag = false;
+                break;
+            }
+        }
+    }
+    
+    if (flag)
+    {
+        puts("OK");
+        for (int i = l; i <= r; i ++)
+            preID[i] = pr[i].x, pr[i].x = 0;
+    }
+    else
+        puts("FAIL");
+}
+
+void deal2() // 恢复
+{
+    int id, l, r;
+    scanf("%d%d%d", &id, &l, &r);
+    
+    bool flag = true;
+    for (int i = l; i <= r; i ++)
+        if (preID.find(i) == preID.end() || preID[i] != id)
+        {
+            flag = false;
+            break;
+        }
+        
+    if (flag)
+    {
+        for (int i = l; i <= r; i ++)
+            if (pr.find(i) != pr.end() && pr[i].x != 0)
+            {
+                flag = false;
+                break;
+            }
+    }
+    
+    if (flag)
+    {
+        puts("OK");
+        for (int i = l; i <= r; i ++)
+            pr[i].x = id;
+    }
+    else
+        puts("FAIL");
+}
+
+void deal3()
+{
+    int p;
+    scanf("%d", &p);
+    
+    if (pr.find(p) != pr.end() && pr[p].x != 0)
+        printf("%d %d\n", pr[p].x, pr[p].y);
+    else
+        printf("0 0\n");
+}
+
+int main()
+{
+    scanf("%d%d%d", &n, &m, &k);
+    
+    for (int i = 0; i < k; i ++)
+    {
+        int op;
+        scanf("%d", &op);
+        
+        if (op == 0)
+            deal0();
+        else if (op == 1)
+            deal1();
+        else if (op == 2)
+            deal2();
+        else
+            deal3();
+            
+    }
+    return 0;
+}
+```
 
 # Q5 极差路径
 ## 算法思路
