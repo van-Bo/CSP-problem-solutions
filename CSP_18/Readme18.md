@@ -130,3 +130,113 @@ int main()
     return 0;
 }
 ```
+
+# Q3 化学方程式
+## 算法思路
+- 处理的的化学方程式与真实的化学方程式相同，不存在如 `CSP_33 Q3` 中化学式的简化形式
+- 使用哈希表 `unordered_map<string, int>` 来统计元素出现的次数
+- 整个化学方程式可以一分为二，变成等号前、后两部分 `f`、`g`
+- `work()` 函数将等号前后两部分，按照 `+` 再次划分，变成最小的结构，该结构的形式为 `c * item`，其中 `c` 为物质前的系数，`item` 为对应物质的化学式
+- `dfs()` 函数递归处理化学式字符串，`dfs(item, k)` 表示递归处理 `item`，其中的处理位置从 `k` 开始。这里的参数 `k` 使用引用的方式，下一次递归函数的 `k` 值会延续上一次的递归函数的 `k` 值。
+- 该题解可以通过 AcWing 官网 (11/11) 的数据点，CSP 官网评测系统下的得分为 100 分
+```C++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+#include <unordered_map>
+
+#define x first
+#define y second
+
+using namespace std;
+typedef unordered_map<string, int> mpsi;
+
+int n;
+string str;
+
+mpsi dfs(string& item, int& k)
+{
+    mpsi subRes;
+    int len = item.length();
+    while (k < len)
+    {
+        if (item[k] >= 'A' && item[k] <= 'Z')
+        {
+            // 处理元素
+            int mark = k;
+            k ++; // 跳过首字母
+            while (k < len && item[k] >= 'a' && item[k] <= 'z') k ++;
+            string e = item.substr(mark, k - mark);
+            
+            // 处理元素底数
+            int cnt = 1;
+            mark = k;
+            while (k < len && isdigit(item[k])) k ++;
+            if (k > mark) cnt = stoi(item.substr(mark, k - mark));
+            
+            subRes[e] += cnt;
+        }
+        else if (item[k] == '(')
+        {
+            k ++;  // 跳过 '('
+            mpsi es = dfs(item, k);
+            k ++;  // 跳过 ')'
+            
+            int cnt = 1, mark = k;
+            while (k < len && isdigit(item[k])) k ++;
+            if (k > mark) cnt = stoi(item.substr(mark, k - mark));
+            
+            for (auto e : es)
+                subRes[e.x] += e.y * cnt;
+        }
+        else if (item[k] == ')')
+            break;
+    }
+    return subRes;
+}
+
+mpsi work(string s)     // 处理方程式前、后两段
+{
+    mpsi res;
+    int len = s.length();
+
+    for (int i = 0; i < len; i ++)
+    {
+        int k = i;
+        while (k < len && s[k] != '+') k ++;
+        string item = s.substr(i, k - i);   // 获取单个物质
+
+        i = k;  // k 指向 '+' 
+        
+        // 处理单个物质前的系数
+        int cnt = 1;
+        k = 0;
+        while (k < item.length() && isdigit(item[k])) k ++;
+        if (k) cnt = stoi(item.substr(0, k));
+        
+        mpsi subRes = dfs(item, k);
+        for (auto e : subRes)
+            res[e.x] += e.y * cnt;
+    }
+    return res;
+}
+
+int main()
+{
+    scanf("%d", &n);
+    while (n --)
+    {
+        cin >> str;
+        
+        int k = str.find('=');
+        string f = str.substr(0, k), g = str.substr(k + 1);
+        
+        mpsi resF = work(f);
+        mpsi resG = work(g);
+        
+        if (resF == resG) puts("Y");
+        else puts("N");
+    }
+    return 0;
+}
+```
