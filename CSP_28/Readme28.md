@@ -154,5 +154,258 @@ int main()
 }
 ```
 
-# Q4 聚集方差
+# Q4 聚集方差（Hack）
 ## 算法思路
+- 朴素模拟
+- 数的信息使用邻接表存储
+- `dfs` 可以以递归的方式求解以 `u` 为根节点子树的节点集合 T，此处使用 `vector<int> T[x]` 来存储以节点 `x` 为根节点子树的节点集合。其中 `N` 按照最大规模 `3e+5` 计算，最坏情况下，内存占用约为 45000 x 4MB (`4.5e+10 x 4` )，存储规模过大，导致出现 $Memory\ Limit\ Exceeded$ 的错误
+- 该题解 AcWing 官网可以通过 (2/10) 的数据点，CSP 官网评测系统下得分为 0 分
+```C++
+#include <iostream>
+#include <algorithm>
+#include <cstring>
+#include <vector>
+
+using namespace std;
+const int N = 3e+5 + 10;
+typedef long long LL;
+
+int n;
+int h[N], e[N], ne[N], idx;
+int a[N];
+vector<int> T[N];
+
+void add(int p, int k)
+{
+    e[idx] = k, ne[idx] = h[p], h[p] = idx ++;
+}
+
+// 获取以 u 为根节点子树的节点集合 T
+void dfs(int u)
+{
+    T[u].push_back(u);
+    
+    for (int i = h[u]; ~i; i = ne[i])
+    {
+        int j = e[i];
+        dfs(j);
+        T[u].insert(T[u].end(), T[j].begin(), T[j].end());
+    }
+}
+
+LL getAns(int u)
+{
+    LL res = 0;
+    int sz = T[u].size();
+    if (sz == 1) return 0;
+    
+    for (int i = 0; i < sz; i ++)
+    {
+        int y = T[u][i];
+        LL mnValue = 0x3f3f3f3f;
+        for (int j = 0; j < sz; j ++)
+        {
+            if (i == j) continue;
+            int z = T[u][j];
+            mnValue = min(mnValue, (LL)(a[z] - a[y]) * (a[z] - a[y]));
+        }
+        res += mnValue;
+    }
+    return res;
+}
+
+int main()
+{
+    scanf("%d", &n);
+    memset(h, -1, sizeof h);
+    for (int i = 2; i <= n; i ++)
+    {
+        int p;
+        scanf("%d", &p);
+        add(p, i);
+    }
+    for (int i = 1; i <= n; i ++)
+        scanf("%d", &a[i]);
+    
+    dfs(1);
+    for (int i = 1; i <= n; i ++)
+        printf("%lld\n", getAns(i));
+
+    return 0;
+}
+```
+- 目标为 `N <= 3000` 的小规模数据
+- `st[p][k]` 标记节点 `p` 是否可以支配 `k`
+- `getSt` 通过枚举子节点，通过父节点标记数组 `p[]` 逆向回溯，直到到达根节点，以此达到填充状态数组 `st[][]` 的目的
+- 时间复杂度：$O(n^3)$
+- 该题解 AcWing 可以通过 (2/10) 的数据点，CSP 官网评测系统下的得分为 15 分
+```C++
+#include <iostream>
+#include <algorithm>
+#include <cstring>
+#include <vector>
+
+using namespace std;
+const int N = 3010;
+typedef long long LL;
+
+int n;
+int a[N], p[N];
+bool st[N][N];
+
+void getSt()
+{
+    for (int i = 1; i <= n; i ++)
+    {
+        st[i][i] = true;
+        
+        int fa = p[i];
+        while (fa != -1)
+        {
+            st[fa][i] = true;
+            fa = p[fa];
+        }
+    }
+}
+
+LL getAns(int u)
+{
+    LL res = 0;
+    
+    int cnt = 0;
+    for (int i = 1; i <= n; i ++)
+        if (st[u][i])
+            cnt ++;
+    if (cnt == 1) 
+        return 0;
+    
+    for (int y = 1; y <= n ; y ++)
+    {
+        if (!st[u][y]) continue;
+        
+        LL mnValue = -1;
+        for (int z = 1; z <= n; z ++)
+        {
+            if (y == z || !st[u][z]) continue;
+
+            if (mnValue == -1) mnValue = (LL)(a[z] - a[y]) * (a[z] - a[y]);
+            else mnValue = min(mnValue, (LL)(a[z] - a[y]) * (a[z] - a[y]));
+        }
+        res += mnValue;
+    }
+
+    return res;
+}
+
+int main()
+{
+    scanf("%d", &n);
+    if (n > 3000) return 0;
+
+    p[1] = -1;
+    for (int i = 2; i <= n; i ++) scanf("%d", &p[i]);
+    for (int i = 1; i <= n; i ++) scanf("%d", &a[i]);
+    
+    getSt();
+    for (int i = 1; i <= n; i ++)
+        printf("%lld\n", getAns(i));
+
+    return 0;
+}
+```
+- 子树期待时间集合存储优化，使用 `multiset` 存储有序序列
+- `multiset<int> T[x]` 存储的是以 `x` 为根节点的子树中的所用期待时间值（可能存在重复的值）。调试多次，共计两种错误，其一，使用了 `set` 的数据结构；其二，存储的数据是节点的期待时间，而不是节点的编号（变量名由此显得不太合适，应该是 `A`）
+- `multiset` 中若重复存在某一值 `x`，则 `find(x)` 所返回的迭代器是这些重复值中的第一个（即最小的）位置
+- 时间复杂度：$O(n^2 \times \log n)$
+- 该题解可以通过 AcWing 官网 (2/10) 的数据点，CSP 官网评测系统下的得分为 40 分
+```C++
+#include <iostream>
+#include <algorithm>
+#include <cstring>
+#include <vector>
+#include <set>
+
+using namespace std;
+const int N = 3010;
+typedef long long LL;
+
+int n;
+int a[N], p[N];
+bool st[N][N];
+multiset<int> T[N];
+
+void getSt()
+{
+    for (int i = 1; i <= n; i ++)
+    {
+        st[i][i] = true;
+        
+        int fa = p[i];
+        while (fa != -1)
+        {
+            st[fa][i] = true;
+            fa = p[fa];
+        }
+    }
+}
+
+void getT()
+{
+    for (int i = 1; i <= n; i ++)
+        for (int j = 1; j <= n; j ++)
+            if (st[i][j])
+                T[i].insert(a[j]);
+}
+
+LL getAns(int u)
+{
+    LL res = 0;
+    
+    if (T[u].size() == 1) 
+        return 0;
+    
+    for (int y = 1; y <= n ; y ++)
+    {
+        if (!st[u][y]) continue;
+        
+        LL mnValue = -1;
+
+        auto it = T[u].find(a[y]);
+        auto preIt = (it == T[u].begin()) ? T[u].end() : prev(it);
+        auto toIt = next(it);
+
+        if (preIt != T[u].end())
+        {
+            int v = *preIt;
+            if (mnValue == -1) mnValue = (LL)(v - a[y]) * (v - a[y]);
+            else mnValue = min(mnValue, (LL)(v - a[y]) * (v - a[y]));
+        } 
+        if (toIt != T[u].end())
+        {
+            int v = *toIt;
+            if (mnValue == -1) mnValue = (LL)(v - a[y]) * (v - a[y]);
+            else mnValue = min(mnValue, (LL)(v - a[y]) * (v - a[y]));
+        }
+
+        res += mnValue;
+    }
+
+    return res;
+}
+
+int main()
+{
+    scanf("%d", &n);
+    if (n > 3000) return 0;
+
+    p[1] = -1;
+    for (int i = 2; i <= n; i ++) scanf("%d", &p[i]);
+    for (int i = 1; i <= n; i ++) scanf("%d", &a[i]);
+    
+    getSt();
+    getT();
+
+    for (int i = 1; i <= n; i ++) printf("%lld\n", getAns(i));
+    return 0;
+}
+```
