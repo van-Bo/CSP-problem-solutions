@@ -129,6 +129,100 @@ int main()
     return 0;
 }
 ```
+## 算法思路
+- 递归处理
+- `m` 为训练科目数量，`n`为距离开幕的时间
+- 解题方法显然不够直接、高效，先前并没有注意到依赖科目的编号小于自身，并且没有提前处理拓扑序列的意识
+- 求解最早开始时间 `ely[]`、最晚开始时间 `lst[]` 均是逆序遍历
+- 求解最早开始时间时，枚举到节点 `x`，若该节点被赋值过，则跳过该枚举过程；若节点 `x` 无依赖项，则 `ely[x] = 1`；若节点 `x` 存在依赖项，则从其依赖项开始递归处理该子树（退出递归的条件是子树抵达叶节点）
+- 求解最晚开始时间 `lst[]`，枚举到节点 `x`，若该节点被赋过值，则跳过该枚举过程；若节点 `x` 无依赖项，则 `lst[x] = n + 1 - t[x]`；若节点 `x` 存在依赖项，则直接依 `p[]` 回溯至父节点，一直回溯到根节点为止
+- 该题解可以通过 AcWing 官网 (10/10) 的数据点，CSP 官网评测系统下的得分为 100 分
+```C++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+#include <vector>
+
+using namespace std;
+const int M = 101;
+
+int n, m;
+int p[M];
+vector<int> child[M];
+int t[M];
+int ely[M], lst[M];
+
+void dfs1(int x)
+{
+    int sz = child[x].size();
+    for (int i = 0; i < sz; i ++)
+    {
+        int tmp = child[x][i];
+        ely[tmp] = ely[x] + t[x];
+        dfs1(tmp);
+    }
+}
+
+void dfs2(int x)
+{
+    if (p[x] == 0) return;
+    int tmp = p[x];
+    if (!lst[tmp]) lst[tmp] = lst[x] - t[tmp];
+    else lst[tmp] = min(lst[tmp], lst[x] - t[tmp]);
+    dfs2(tmp);
+}
+
+int find(int x)
+{
+    while (p[x] != 0) x = p[x];
+    return x;
+}
+
+int main()
+{
+    scanf("%d%d", &n, &m);
+    for (int i = 1; i <= m; i ++) 
+    {
+        cin >> p[i];
+        child[p[i]].push_back(i);
+    }
+    for (int i = 1; i <= m; i ++) cin >> t[i];
+
+
+    for (int i = m; i >= 1; i --) 
+    {
+        if (ely[i]) continue;
+        if (p[i] == 0) ely[i] = 1;
+        else
+        {
+            int pp = find(i);
+            ely[pp] = 1;
+            dfs1(pp);
+        }
+    }
+    for (int i = 1; i <= m; i ++) printf("%d ", ely[i]);
+    puts("");
+
+    for (int i = 1; i <= m; i ++)
+        if (ely[i] + t[i] - 1 > n) 
+            return 0;
+
+    for (int i = m; i >= 1; i --)
+    {
+        if (lst[i]) continue;
+        if (p[i] == 0) lst[i] = n + 1 - t[i];
+        else 
+        {
+            int ch = i;
+            lst[ch] = n + 1 - t[ch];
+            dfs2(ch);
+        }
+    }
+    for (int i = 1; i <= m; i ++) printf("%d ", lst[i]);
+
+    return 0;
+}
+```
 
 # Q3 JPEG编码
 ## 算法思路
