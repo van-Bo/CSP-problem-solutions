@@ -1,6 +1,6 @@
 > 第24次CCF计算机软件能力认证
-> 模拟认证 CSP（100 + 100）
-> 模拟认证 AcWing（(10/10), (11/11)）
+> 模拟认证 CSP（100 + 100 + 40 + 25 + 24）
+> 模拟认证 AcWing（(10/10), (11/11), (5/12), (9/20), (9/33)）
 
 # Q1 序列查询
 ## 算法思路
@@ -158,6 +158,122 @@ int main()
 
 # Q3 登机牌条码
 ## 算法思路
+- 通过前 40% 的数据点，此类数据点的特点是无需计算校验码字
+- 注意在编码阶段，编码器处于大写字母模式。
+- 该题解可以通过 AcWing 官网 (5/12) 的数据点，CSP 官网评测系统下的得分为 40 分
+```C++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+
+using namespace std;
+const int N = 2000, M = 1000;
+
+int w, s;
+string str;
+int num[N], codeWord[M];
+int cntNum, cntWord;
+
+void getCodeWord()
+{
+    int len = str.length();
+    int mark = 0; // 0 为大写字母，1 为小写字母，2 为数字
+    for (int i = 0; i < len; i ++)
+    {
+        if (isdigit(str[i]))    // 当前的输入项为数字
+        {
+            if (mark == 0) // 前一字符是大写字母
+            {
+                num[cntNum ++] = 28;
+                num[cntNum ++] = str[i] - '0';
+            }
+            else if (mark == 1) // 前一字符是小写字母
+            {
+                num[cntNum ++] = 28;
+                num[cntNum ++] = str[i] - '0';
+            }
+            else if (mark == 2) // 前一字符是数字
+            {
+                num[cntNum ++] = str[i] - '0';
+            }
+            mark = 2;
+        }
+        else if (str[i] >= 'a' && str[i] <= 'z')    // 当前输入项为小写字母
+        {
+            if (mark == 0) // 前一字符是大写字母
+            {
+                num[cntNum ++] = 27;
+                num[cntNum ++] = str[i] - 'a';
+            }
+            else if (mark == 1) // 前一字符是小写字母
+            {
+                num[cntNum ++] = str[i] - 'a';
+            }
+            else if (mark == 2) // 前一字符是数字
+            {
+                num[cntNum ++] = 27;
+                num[cntNum ++] = str[i] - 'a';
+            }
+            mark = 1;
+        }
+        else if (str[i] >= 'A' && str[i] <= 'Z')    // 当前输入项为大写字母
+        {
+            if (mark == 0) // 前一字符是大写字母
+            {
+                num[cntNum ++] = str[i] - 'A';
+            }
+            else if (mark == 1) // 前一字符是小写字母
+            {
+                num[cntNum ++] = 28;
+                num[cntNum ++] = 28;
+                num[cntNum ++] = str[i] - 'A';
+            }
+            else if (mark == 2) // 前一字符是数字
+            {
+                num[cntNum ++] = 28;
+                num[cntNum ++] = str[i] - 'A';
+            }
+            mark = 0;
+        }
+    }
+}
+
+int main()
+{
+    scanf("%d%d", &w, &s);
+    if (s != -1) return 0;
+    
+    cin >> str;
+    getCodeWord();
+    
+    if (cntNum % 2 == 1)
+        num[cntNum ++] = 29;
+        
+    for (int i = 0; i < cntNum; i ++)
+    {
+        int H = num[i], L = num[i + 1];
+        codeWord[cntWord ++] = H * 30 + L;
+        i ++;
+    }
+    
+    if ((cntWord + 1) % w == 0)
+    {
+        printf("%d\n", cntWord + 1);
+        for (int i = 0; i < cntWord; i ++)
+            printf("%d\n", codeWord[i]);
+    }
+    else
+    {
+        int cnt900 = w - (cntWord + 1) % w;
+        printf("%d\n", cntWord + 1 + cnt900);
+        for (int i = 0; i < cntWord; i ++)
+            printf("%d\n", codeWord[i]);
+        for (int i = 0; i < cnt900; i ++)
+            printf("%d\n", 900);
+    }
+    return 0;
+}
+```
 
 # Q4 磁盘文件操作
 ## 算法思路
