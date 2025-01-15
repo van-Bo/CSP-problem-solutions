@@ -1,6 +1,6 @@
 > CSP(第35次CCF计算机软件能力认证)
 > 正式认证(100 + 80 + 0 + 30 + 35)
-> 模拟认证()
+> 模拟认证(100 + 100 + )
 
 # Q1 密码
 ## 算法思路
@@ -70,7 +70,7 @@ int main()
 ## 算法思路
 - 字符之间的替换函数使用哈希表 `pr` 存储
 - 暴力模拟替换
-- 时间复杂度 $O(m \times k \times \log n)$
+- 时间复杂度 $O(m \times k \times 100 \times \log n)$, 其中 `m` 为测试查询数量, `k` 为变换次数, `n` 为变换字符对数
 - 该题解 CSP 官网评测得分 80 分, 报错提示为 `TLE`
 ## 输入读取字符（串）那些事儿
 - `std::getline(std::cin, str)` 从标准输入 `std::cin` 读取一行字符串（包括空格）到 `std::string str`，直到换行符或文件末尾为止
@@ -128,6 +128,102 @@ int main()
 ```
 ## 算法思路
 - 标记每个字符的替换循环节大小, 数据范围中变换次数 `k` 便可看出端倪
+- `reccuringTimes` 记录字符完成一整个轮回的变换次数, 该集合使用函数 `initReccuringTimes` 来维护
+- 将时间复杂度中的 `k` 通过循环节处理缩小至 `n`(最坏情况遍历下, 轮回过程遍历所有的变换字符对)
+- 时间复杂度：$O(m \times 100 \times n)$
+- 该题解 CSP 官网评测得分为 100 分
 ```C++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+#include <unordered_map>
 
+using namespace std;
+unordered_map<char, char> pr;
+unordered_map<char, int> recurringTimes;
+string str;
+int n, m;
+
+void initReccuringTimes()
+{
+    char set[65] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 ";
+    for (int i = 0; i < 63; i ++)
+    {
+        char c = set[i];
+        char tmp = set[i];
+        int times = 0;
+        bool isSearch = true;
+
+        if (pr.find(tmp) != pr.end() && pr[tmp] == c) // #HH#
+        {
+            recurringTimes[c] = 0;
+            isSearch = false;
+            continue;
+        }
+        if (pr.find(tmp) == pr.end())
+        {
+            recurringTimes[c] = 0;
+            isSearch = false;
+            continue;
+        }
+
+        while (isSearch)
+        {
+            tmp = pr[tmp];
+            times ++;
+            if (tmp == c) 
+            {
+                recurringTimes[c] = times;
+                break;
+            }
+        }
+        
+    }
+}
+
+int main()
+{
+    getline(cin, str);
+
+    scanf("%d", &n);
+    cin.get();
+    for (int i = 0; i < n; i ++)
+    {
+        string s;
+        getline(cin, s);
+        pr[s[1]] = s[2];
+    }
+
+    initReccuringTimes();
+
+    scanf("%d", &m);
+    while (m --)
+    {
+        int x;
+        scanf("%d", &x);
+
+        string temp = str;
+        
+        for (int i = 1; i < temp.size() - 1; i ++)
+        {
+             int toggles = recurringTimes[temp[i]];
+             int shiftTimes = x;
+             if (toggles != 0) // 存在循环节
+             {
+                 shiftTimes %= toggles;
+                 for (int j = 0; j < shiftTimes; j ++)
+                 {
+                    temp[i] = pr[temp[i]];
+                 }
+             }
+             else // 不存在循环节
+             {
+                continue;
+             }
+        }
+        cout << temp << endl;
+    }
+    return 0;
+    
+}
 ```
