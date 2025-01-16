@@ -128,6 +128,7 @@ int main()
 ```
 ## 算法思路
 - 标记每个字符的替换循环节大小, 数据范围中变换次数 `k` 便可看出端倪
+- `initReccuringTimes` 函数处理字符变换过程, 默认一定存在循环, 而不存在收敛(Hack)
 - `reccuringTimes` 记录字符完成一整个轮回的变换次数, 该集合使用函数 `initReccuringTimes` 来维护
 - 将时间复杂度中的 `k` 通过循环节处理缩小至 `n`(最坏情况遍历下, 轮回过程遍历所有的变换字符对)
 - 时间复杂度：$O(m \times 100 \times n)$
@@ -225,5 +226,123 @@ int main()
     }
     return 0;
     
+}
+```
+
+# Q4 通讯延迟
+## 算法思路
+- 对于同一基站可以通信覆盖的节点之间建立无向边, 权值为通讯代价
+- 在构建的无向图的节点之间的权值时, 遵循小代价为优的准则(通讯权值无向图使用邻接表维护)
+- 采用 `Dijkstra` 算法获取 节点 `1` 到 节点 `n` 之间的最小通讯代价
+- 该题解 CSP 官网评测系统下的得分 30 分, 通过 (6/20) 的测试点, 评测报错提示为 `TLE`
+```C++
+#include <iostream>
+#include <cstring>
+#include <cstring>
+#include <unordered_set>
+#include <queue>
+
+#define x first
+#define y second
+
+using namespace std;
+typedef pair<int, int> PII;
+const int N = 5010;
+
+int n, m;
+PII p[N];
+int h[N], e[N * 2], ne[N * 2], idx, w[N * 2];
+bool st[N][N];  // st[i][j] 表示 i j 之间可以连通
+
+bool isValid(PII sp, int r, PII point)
+{
+    bool flag = false;
+    if (point.x >= sp.x - r && point.x <= sp.x + r && point.y >= sp.y - r && point.y <= sp.y + r)
+        flag = true;
+    return flag;
+}
+
+void add(int p1, int p2, int t)
+{
+    if (st[p1][p2])
+    {
+        for (int i = h[p1]; ~i; i = ne[i])
+        {
+            int j = e[i];
+            if (j == p2)
+                w[i] = min(w[i], t);
+        }
+    }
+    else
+    {
+        e[idx] = p2, w[idx] = t,  ne[idx] = h[p1], h[p1] = idx ++;
+        st[p1][p2] = true;
+    }
+}
+
+bool state[N];
+int dist[N];
+
+bool Dijkstra()
+{
+    memset(dist, 0x3f, sizeof dist);
+    dist[1] = 0;
+    
+    for (int i = 0; i < n; i ++)
+    {
+        int t = -1;
+        for (int j = 1; j <= n; j ++)
+        {
+            if (!state[j] && (t == -1 || dist[j] < dist[t]))
+                t = j;
+        }
+
+        state[t] = true;
+        if (t == n) break;
+
+        for (int j = h[t]; ~j; j = ne[j])
+        {
+            int k = e[j];
+            dist[k] = min(dist[k], dist[t] + w[j]);
+        }
+    }
+
+    if (dist[n] != 0x3f3f3f3f)
+        return true;
+    else
+        return false;
+}
+
+int main()
+{
+    memset(h, -1, sizeof h);
+
+    scanf("%d%d", &n, &m);
+    for (int i = 1; i <= n; i ++)
+        scanf("%d%d", &p[i].x, &p[i].y);
+
+    for (int i = 1; i <= m; i ++)    // 枚举基站
+    {
+        PII sp;
+        int r, t;
+        scanf("%d%d%d%d", &sp.x, &sp.y, &r, &t);
+        unordered_set<int> temp;    // 该基站可以覆盖到的有效点
+        for (int j = 1; j <= n; j ++)
+            if (isValid(sp, r, p[j]))
+                temp.insert(j);
+
+        for (auto p1 : temp)
+            for (auto p2 : temp)
+            {
+                if (p1 == p2) continue;
+                add(p1, p2, t), add(p2, p1, t);
+            }
+    }
+
+    if (Dijkstra())
+        printf("%d\n", dist[n]);
+    else
+        puts("Nan");
+    return 0;
 }
 ```
