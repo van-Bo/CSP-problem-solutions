@@ -234,6 +234,8 @@ int main()
 - 对于同一基站可以通信覆盖的节点之间建立无向边, 权值为通讯代价
 - 在构建的无向图的节点之间的权值时, 遵循小代价为优的准则(通讯权值无向图使用邻接表维护)
 - 采用 `Dijkstra` 算法获取 节点 `1` 到 节点 `n` 之间的最小通讯代价
+- 读取基站数据并初始化建图过程的时间复杂度: $m \times (n + 20^2 \times X)$, 其中 `X` 为 `add(p1, p2, t)` 中与节点 `p1` 通信联通的节点数量(未知量), 题面中只是给定了每个通讯基站至多覆盖 20 个节点, 而一个节点可能被多个基站覆盖, 超时问题原因部分在此
+- `Dijkstra` 的时间复杂度: $O(n \times max(n, X))$, 其中, `X` 的数据规模同上
 - 该题解 CSP 官网评测系统下的得分 30 分, 通过 (6/20) 的测试点, 评测报错提示为 `TLE`
 ```C++
 #include <iostream>
@@ -316,6 +318,112 @@ bool Dijkstra()
 int main()
 {
     memset(h, -1, sizeof h);
+
+    scanf("%d%d", &n, &m);
+    for (int i = 1; i <= n; i ++)
+        scanf("%d%d", &p[i].x, &p[i].y);
+
+    for (int i = 1; i <= m; i ++)    // 枚举基站
+    {
+        PII sp;
+        int r, t;
+        scanf("%d%d%d%d", &sp.x, &sp.y, &r, &t);
+        unordered_set<int> temp;    // 该基站可以覆盖到的有效点
+        for (int j = 1; j <= n; j ++)
+            if (isValid(sp, r, p[j]))
+                temp.insert(j);
+
+        for (auto p1 : temp)
+            for (auto p2 : temp)
+            {
+                if (p1 == p2) continue;
+                add(p1, p2, t), add(p2, p1, t);
+            }
+    }
+
+    if (Dijkstra())
+        printf("%d\n", dist[n]);
+    else
+        puts("Nan");
+    return 0;
+}
+```
+## 存储方式优化
+- 图的存储方式进行优化(邻接表 --> 邻接矩阵)
+- 枚举读取基站数据并初始化建图过程的时间复杂度: $O(m \times (n + 20^2))$
+- `Dijkstra` 的时间复杂度: $O(n^2)$
+- 该题解 CSP 官网评测系统下的得分为 60 分, 通过 (12/20) 的测试点, 评测报错提示为 `TLE`
+```C++
+#include <iostream>
+#include <cstring>
+#include <cstring>
+#include <unordered_set>
+#include <queue>
+
+#define x first
+#define y second
+
+using namespace std;
+typedef pair<int, int> PII;
+const int N = 5010;
+
+int n, m;
+PII p[N];
+int g[N][N];
+bool st[N][N];  // st[i][j] 表示 i j 之间可以连通
+
+bool isValid(PII sp, int r, PII point)
+{
+    bool flag = false;
+    if (point.x >= sp.x - r && point.x <= sp.x + r && point.y >= sp.y - r && point.y <= sp.y + r)
+        flag = true;
+    return flag;
+}
+
+void add(int p1, int p2, int t)
+{
+    if (st[p1][p2]) 
+        g[p1][p2] = min(g[p1][p2], t);
+    else
+        g[p1][p2] = t, st[p1][p2] = true;
+}
+
+bool state[N];
+int dist[N];
+
+bool Dijkstra()
+{
+    memset(dist, 0x3f, sizeof dist);
+    dist[1] = 0;
+    
+    for (int i = 0; i < n; i ++)
+    {
+        int t = -1;
+        for (int j = 1; j <= n; j ++)
+        {
+            if (!state[j] && (t == -1 || dist[j] < dist[t]))
+                t = j;
+        }
+
+        state[t] = true;
+        if (t == n) break;
+
+        for (int j = 1; j <= n; j ++)
+        {
+            if (!st[t][j]) continue;
+            dist[j] = min(dist[j], dist[t] + g[t][j]);
+        }
+    }
+
+    if (dist[n] != 0x3f3f3f3f)
+        return true;
+    else
+        return false;
+}
+
+int main()
+{
+    memset(g, -1, sizeof g);
 
     scanf("%d%d", &n, &m);
     for (int i = 1; i <= n; i ++)
