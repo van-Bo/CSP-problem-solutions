@@ -1,6 +1,6 @@
 > CSP(第35次CCF计算机软件能力认证)
 > 正式认证(100 + 80 + 0 + 30 + 35)
-> 模拟认证(100 + 100 + )
+> 模拟认证(100 + 100 + 0 + 60 + 35)
 
 # Q1 密码
 ## 算法思路
@@ -451,6 +451,81 @@ int main()
         printf("%d\n", dist[n]);
     else
         puts("Nan");
+    return 0;
+}
+```
+
+# Q5 木板切割
+## 算法思路
+- 朴素模拟
+- `set<int> p[i]` 用于存储 `i` 号木板所含的木板段编号
+- `st[i]` 用于在每次询问计算输出值时, 标记 `i` 号颜色值是否存在
+- `cnt1` 是切下木板中的不同颜色数, `cnt2` 是切下木板中的颜色段数
+- 该题解 CSP 官网评测系统下得分为 35 分, 可以通过 (7/20) 的数据点, 评测报错提示为 `TLE`
+```C++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+#include <set>
+
+using namespace std;
+const int N = 1e+5 + 10;
+
+int n, m, k;
+int c[N];
+
+set<int> p[N];
+bool st[N];
+
+int main()
+{
+    scanf("%d%d%d",  &n, &m, &k);
+    for (int i = 1; i <= n; i ++)
+        scanf("%d", &c[i]);
+    
+    for (int i = 1; i <= n; i ++)
+        p[1].insert(i);
+
+    int cntID = 2;
+    while (k --)
+    {
+        int id, l, r;
+        scanf("%d%d%d", &id, &l, &r);
+
+        // 拆分
+        set<int> s,  temp;
+        for (auto cs : p[id])
+        {
+            if (cs >= l && cs <= r)
+                s.insert(cs);
+            else
+                temp.insert(cs);
+        }
+
+        p[id] = temp;
+        p[cntID] = s;
+
+        int cnt1  = 0, cnt2 = 0;
+        memset(st, 0, sizeof st);
+
+        int preColor = -1;
+        for (auto cs : p[cntID])
+        {
+            st[c[cs]] = true;
+            if (c[cs] != preColor)
+            {
+                cnt2 ++;
+                preColor = c[cs];
+            }
+        }
+
+        for (int i = 1; i <= m; i ++)
+            if (st[i])
+                cnt1 ++;
+        
+        cntID ++;
+        printf("%d %d\n", cnt1, cnt2);
+    }
     return 0;
 }
 ```
