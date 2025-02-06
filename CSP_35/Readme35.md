@@ -229,6 +229,123 @@ int main()
 }
 ```
 
+# Q3 补丁应用
+## 算法思路
+- 只考虑一个补丁的情况, 进行模拟(不考虑补丁损坏)
+- `scanf` 读取原始文件行数后, `getline` 依次按行读取后续的输入数据
+- `countLine` 标记已经成功存储到 `orignText` 的原始文件行数
+- 读取到 `@@ * @@` 块时, 获取 `MM`, `mm` 值, 其中, `MM = sum(count(space), count(-))`, `mm = sum(count(space), count(+))`; 之后, 额外处理一行补丁, 此处先定位, 再处理 `space` 或 `-`(此处关于 `NN`, `nn` 的定位没咋看懂 >_<)
+- 逐行处理补丁, 同时用 `checkMM`, `checkmm` 来维护已经处理过的 `space`, `-`, `+` 的个数, 一旦处理完毕后, 直接输出原始文本中的剩余数据即可
+- 该题解 CSP 官网评测系统下得分为 20 分, 通过 (2/7) 的测试点, 评测报错提示 `Wrong Answer`
+```C++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+
+using namespace std;
+const int N = 2010;
+
+int n, countLine;
+string orignText[N];
+string temp;
+
+int countMM = 0, countmm = 0;
+int idx = -1;
+int checkMM = 0, checkmm = 0;
+
+int main()
+{
+    scanf("%d", &n);
+    cin.get();  
+
+    while (getline(cin, temp))
+    {
+        if (countLine < n)  // 读取文本
+            orignText[countLine ++] = temp;
+        
+        if (temp[0] == '@')
+        {
+            for (int i = 0; i < temp.size(); i ++) // 获取 MM mm 值
+            {
+                if (temp[i] == ',') // 锁定第一个逗号
+                {
+                    int j = i + 1;
+                    while (temp[j] >= '0' && temp[j] <= '9')
+                    {
+                        countMM = countMM * 10 + temp[j] - '0';
+                        j ++;
+                    }
+                    while (temp[j] != ',')  // 锁定第二个逗号
+                    {
+                        j ++;
+                    }
+                    j ++;
+                    while (temp[j] >= '0' && temp[j] <= '9')
+                    {
+                        countmm = countmm * 10 + temp[j] - '0';
+                        j ++;
+                    }
+                    break;
+                }
+            }
+            
+            // 定位, 确定 index 值
+            string t;
+            getline(cin, t);
+            char op = t[0];
+            t.erase(0, 1);
+            for (int i = 0; i < countLine; i ++)
+            {
+                if (t != orignText[i])
+                {
+                    cout << orignText[i] << endl;
+                }
+                else 
+                {
+                    idx = i;
+                    break;
+                }
+            }
+            if (op == ' ')
+            {
+                cout << orignText[idx ++] << endl;
+                checkMM ++, checkmm ++;
+            }
+            if (op == '-')
+            {
+                idx ++;
+                checkMM ++;
+            }
+        }
+        if (temp[0] == '+')
+        {
+            temp.erase(0, 1);
+            cout << temp << endl;
+            checkmm ++;
+        }
+        if (temp[0] == ' ')
+        {
+            cout << orignText[idx ++] << endl;
+            checkMM ++, checkmm ++;
+        }
+        if (temp[0] == '-')
+        {
+            idx ++;
+            checkMM ++;
+        }
+
+        if (checkMM == countMM && checkmm == countmm && countMM != 0 && countmm != 0)
+        {
+            for (int i = idx; i < countLine; i ++)
+            {
+                cout << orignText[i] << endl;
+            }
+        }
+    }
+    return 0;
+}
+```
+
 # Q4 通讯延迟
 ## 算法思路
 - 对于同一基站可以通信覆盖的节点之间建立无向边, 权值为通讯代价
