@@ -1,7 +1,7 @@
 # 第25次CCF计算机软件能力认证
 
 > 模拟认证 CSP（100 + 100 + ? + ?）
-> 模拟认证 AcWing（(10/10), (10/10), ?, (2/21)）
+> 模拟认证 AcWing（(10/10), (10/10), (4/21), (2/21)）
 
 ## Q1 未初始化警告
 
@@ -84,6 +84,49 @@ int main()
         int x;
         scanf("%d", &x);
         printf("%d\n", cnt[x]);
+    }
+    return 0;
+}
+```
+
+## Q3 计算资源调度器
+
+### Q3 算法思路
+
+- 针对三种标准需求都无需考虑的情况
+- 计算节点可以被分配多个计算任务，分配原则如下：选择此时运行计算任务数量最少的计算节点；选择编号最小的计算节点 —— 分配顺序从节点序号最小的节点开始，按增序的方向分配计算任务，分配到最大节点序号，则再返回最小序号节点，以此类推
+- 该题解可以通过 AcWing 官网 (4/21) 的数据点
+
+```C++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+
+using namespace std;
+
+int n, m, g;   // 节点数 n，可用区 m
+
+int main()
+{
+    cin >> n >> m;
+    for (int i = 0; i < n; i ++)    // skip data
+    {
+        int temp;
+        cin >> temp;
+    }
+    cin >> g;
+    int currentNode = 1;
+    for (int i = 0; i < g; i ++)
+    {
+        int f, a, na, pa, paa, paar;
+        cin >> f >> a >> na >> pa >> paa >> paar;
+        for (int j = 0; j < f; j ++)
+        {
+            cout << currentNode << " ";
+            currentNode ++;
+            if (currentNode == n + 1) currentNode = 1;
+        }
+        puts("");
     }
     return 0;
 }
