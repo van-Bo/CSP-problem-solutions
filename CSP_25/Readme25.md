@@ -1,7 +1,7 @@
 # 第25次CCF计算机软件能力认证
 
-> 模拟认证 CSP（100 + 100 + ? + ?）
-> 模拟认证 AcWing（(10/10), (10/10), (4/21), (2/21)）
+> 模拟认证 CSP（100 + 100 + ? + ? + ?）
+> 模拟认证 AcWing（(10/10), (10/10), (4/21), (2/21), (4/21)）
 
 ## Q1 未初始化警告
 
@@ -240,6 +240,40 @@ int main()
                     cnt ++;
             cout << cnt << endl;
         }
+    }
+    return 0;
+}
+```
+
+## Q5 博弈论与石子合并
+
+### Q5 算法思路
+
+- 考虑子任务2，参考BiliBili `BV1h3411K7Rs`
+- 该题解可以通过 AcWing 官网 (4/21) 的数据点
+
+```C++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+
+using namespace std;
+
+int main()
+{
+    int n, k;
+    cin >> n >> k;
+    int temp;
+    for (int i = 0; i < n; i ++) cin >> temp;
+    if (n & 1)
+    {
+        if (k == 1) cout << temp;
+        else cout << (n/2 + 1) * temp;
+    }
+    else
+    {
+        if (k == 1) cout << (n/2 + 1) * temp;
+        else cout << temp;
     }
     return 0;
 }
