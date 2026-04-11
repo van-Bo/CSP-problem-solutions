@@ -177,3 +177,103 @@ int main()
     return 0;
 }
 ```
+
+## Q3 图片解码
+
+### Q3 算法思路(demo1, Subtask1/2)
+
+- `scanf` 读入数据**不会**过滤掉空白字符(空格、换行、Tab)，导致输入数据错误。改用 `cin` 读入字符数据，会自动过滤掉空白字符，确保正确读取每个字符。
+
+```C++
+    // scanf 错误处理输入
+    cin >> z;
+    for (int i = 0; i < z; i ++)
+        for (int j = 0; j < z; j ++)
+            scanf("%c", &g[i][j]);
+
+    // scanf 正确处理输入
+    cin >> z;
+    scanf("\n");
+    for (int i = 0; i < z; i ++)
+    {
+        for (int j = 0; j < z; j ++)
+            scanf("%c", &g[i][j]);
+        scanf("\n");
+    }
+```
+
+- `swap` 函数交换字符时，必须使用**引用传递**，否则只能交换函数内的局部变量，无法修改原数组中的字符。
+- 该题解只解决 Subtask1/2，可以通过 smqyOJ (11/23) 的数据点
+
+### Q3 代码实现(demo1, Subtask1/2)
+
+```C++
+#include <bits/stdc++.h>
+using namespace std;
+const int N = 405;
+const int M = 5e+4 + 10;
+char g[N][N];
+int z, t;
+int ops[M][6];
+
+void swap(char &a, char &b)
+{
+    char temp;
+    temp = a;
+    a = b;
+    b = temp;
+}
+
+void solve(int u, int d, int l, int r, int o)
+{
+    if (o == 1) // up-down
+    {
+        for (int i = l; i <= r; i ++)
+        {
+            int up = u, down = d;
+            while (up < down) swap(g[up][i], g[down][i]), up ++, down --;
+        }
+    }
+    else if (o == -1) // left-right
+    {
+        for (int i = u; i <= d; i ++)
+        {
+            int left = l, right = r;
+            while (left < right) swap(g[i][left], g[i][right]), left ++, right --;
+        }
+    }
+}
+
+int main()
+{
+    cin >> z;
+    for (int i = 0; i < z; i ++)
+        for (int j = 0; j < z; j ++)
+            cin >> g[i][j];
+        
+    int ops_num;
+    cin >> ops_num >> t;
+    
+    for (int i = 0; i < t; i ++)
+        for (int j = 0; j < 6; j ++)
+            cin >> ops[i][j];
+
+    for (int i = t - 1; i >= 0; i --)
+        solve(ops[i][1]-1, ops[i][2]-1, ops[i][3]-1, ops[i][4]-1, ops[i][5]);
+
+    int row = 0, col = 0;
+    for (int i = 0; i < z; i ++)
+    {
+        if (g[i][0] != '?') row ++;
+        if (g[0][i] != '?') col ++;
+    }
+    printf("%d %d\n", row, col);
+    for (int i = 0; i < row; i ++)
+    {
+        for (int j = 0; j < col; j ++)
+            printf("%c", g[i][j]);
+        puts("");
+    }
+    return 0;
+}
+```
