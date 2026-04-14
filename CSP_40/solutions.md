@@ -1,6 +1,6 @@
 # CSP(第40次CCF计算机软件能力认证)
 
-> smqyOJ Judge((12/12) + (23/23) + (23/23) + 60 + 35)
+> smqyOJ Judge((12/12) + (23/23) + (23/23) + (6/30) + 35)
 
 ## Q1 集合
 
@@ -438,6 +438,61 @@ int main()
         }
         puts("");
     }
+    return 0;
+}
+```
+
+## Q4 C形阵
+
+### Q4 算法思路(demo1, Subtask1)
+
+- 在子任务1的条件范围下，暴力枚举所有可行的局面即可
+- 利用 `set` 数据结构判断C形阵是否是完美的C形阵，`set` 的核心特性就是存储不重复的元素
+- 该题解可以通过 smqyOJ (6/30) 的数据点，得分 30 分
+
+### Q4 代码实现(demo1, Subtask1)
+
+```C++  
+#include <bits/stdc++.h>
+using namespace std;
+int op, n, res;
+int main()
+{
+    cin >> op >> n;
+    int a, b, c, d, e, f, g;
+    for (int i = 1; i <= n; i ++) // b = f
+    {
+        b = i, f = i;
+        for (int j = 1; j <= i * i; j ++) // c
+        {
+            c = j;
+            if ((b * b) % c != 0) continue;
+            a = (b * b) / c;
+            for (int k = 1; k <= i * i; k ++) // f
+            {
+                e = k;
+                if ((b * b) % e != 0) continue;
+                g = (b * b) / e;
+
+                if ((b * b * b) % (c * e) != 0) continue;
+                d = (b * b * b) / (c * e);
+                if (op == 0) res += d;
+                else
+                {
+                    set<int> s;
+                    s.insert(a);
+                    s.insert(b);
+                    s.insert(c);
+                    s.insert(d);
+                    s.insert(e);
+                    s.insert(f);
+                    s.insert(g);
+                    if (s.size() == 6) res += d;
+                }
+            }
+        }
+    }
+    cout << res << endl;
     return 0;
 }
 ```
