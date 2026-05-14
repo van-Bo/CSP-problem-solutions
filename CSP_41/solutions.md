@@ -1,6 +1,6 @@
 # CSP(第41次CCF计算机软件能力认证)
 
-> smqyOJ Judge((10/10) + (22/22))
+> smqyOJ Judge((10/10) + (22/22) + (23/23))
 
 ## Q1 平衡数
 
@@ -200,6 +200,399 @@ int main()
         ans = min(ans, time - task0_save - task1_save);
     }
     printf("%.6lf\n", ans);
+    return 0;
+}
+```
+
+## Q3 进程通信
+
+### Q3 算法思路(demo1, subtask-40%)
+
+- 针对前 40% 不存在 delete 操作的测试点，模拟即可
+- 使用 `freePos` 维护当前的空闲段，标记是否占用和是否存储对象的数组 `e` 和 `ele` 似乎没有必要，可以直接通过 `freePos` 来维护空闲段信息
+- 使用 `pro[p].chain` 维护进程 p 的链表信息
+- `op_new` 是 first fit 分配方式，而不是题目所要求的 best fit 分配方式，因为不存在 delete 操作，所以 first fit 和 best fit 的结果是一样的
+- 该题解可以通过 smqyOJ (8/23)的测试点，得分 40 分
+
+### Q3 代码实现(demo1, subtask-40%)
+
+```C++
+#include <bits/stdc++.h>
+using namespace std;
+const int N = 8e+5 + 10;
+typedef pair<int, int> PII;
+#define x first
+#define y second
+
+int n, q;
+bool e[N];  // 是否占用
+bool ele[N];  // 是否存储对象
+vector<PII> freePos;
+int numFreePos;
+struct Node
+{
+    int l, r, pos = -1; // pos 为当前已经存储的位置
+};
+struct Process
+{
+    int numNode = 0;
+    vector<Node> chain;
+}pro[110];
+
+void op_new(int p, int l)
+{
+    for (int i = 0; i < numFreePos; i ++)   // 寻找空闲段
+    {
+        int start = freePos[i].x, end = freePos[i].y;
+        if (end - start + 1 >= l)
+        {
+            // 维护进程接口
+            Node temp = {start, start + l - 1, -1};
+            pro[p].chain.push_back(temp);
+            pro[p].numNode ++;
+
+            // 维护空闲段
+            if (end - start + 1 > l)
+                freePos[i] = {start + l, end};
+            else
+                freePos.erase(freePos.begin() + i);
+
+            printf("%d\n", start);
+            break;
+        }
+    }
+}
+
+void op_send(int p)
+{
+    int ans = 0;
+    for (int i = 0; i < pro[p].numNode; i ++)
+    {
+        auto &t = pro[p].chain[i];
+        int insertPos = t.pos;
+        if (insertPos == -1 || insertPos == t.r) t.pos = t.l;
+        else t.pos = insertPos + 1;
+        ans += t.pos;
+    }
+    printf("%d\n", ans);
+}
+
+void op_delete(int p, int k)
+{
+
+}
+
+int main()
+{
+    cin >> n >> q;
+    freePos.push_back({0, 0x3f3f3f3f});
+    numFreePos = 1;
+    for (int i = 0; i < q; i ++)
+    {
+        string op;
+        cin >> op;
+        int p, l;
+        if (op == "new")
+        {
+            cin >> p >> l;
+            op_new(p, l);
+        }
+        else if (op == "delete")
+        {
+            cin >> p >> l;
+            op_delete(p, l);
+        }
+        else
+        {
+            cin >> p;
+            op_send(p);
+        }
+    }
+    return 0;
+}
+```
+
+### Q3 算法思路(demo2, subtask-80%)
+
+- 添加 delete 操作的处理，维护空闲段时需要考虑合并相邻的空闲段，合理利用 `vector insert/erase` 库函数
+- `op_new` 需要按照 best fit 的方式分配内存段，遍历 `freePos` 寻找最适合的空闲段
+- 该题解可以通过 smqyOJ (21/23)的测试点，得分 80 分
+
+### Q3 代码实现(demo2, subtask-80%)
+
+```C++
+#include <bits/stdc++.h>
+using namespace std;
+const int N = 8e+5 + 10;
+typedef pair<int, int> PII;
+#define x first
+#define y second
+
+int n, q;
+bool e[N];  // 是否占用
+bool ele[N];  // 是否存储对象
+vector<PII> freePos;
+int numFreePos;
+struct Node
+{
+    int l, r, pos = -1; // pos 为当前已经存储的位置
+};
+struct Process
+{
+    int numNode = 0;
+    vector<Node> chain;
+}pro[110];
+
+void op_new(int p, int l)
+{
+    int flag = -1, min_len = 0;
+    for (int i = 0; i < numFreePos; i ++)   // 寻找最佳空闲段
+    {
+        int start = freePos[i].x, end = freePos[i].y;
+        int length = end - start + 1;
+        if (flag == -1 && length >= l)
+            flag = i, min_len = length;
+        if (length >= l && length < min_len)
+            flag = i, min_len = length;
+    }
+
+    int start = freePos[flag].x, end = freePos[flag].y;
+    Node temp = {start, start + l - 1, -1};
+    pro[p].chain.push_back(temp);
+    pro[p].numNode ++;
+
+    if (end - start + 1 > l)
+        freePos[flag] = {start + l, end};
+    else
+        freePos.erase(freePos.begin() + flag), numFreePos --;
+
+    printf("%d\n", start);
+}
+
+void op_send(int p)
+{
+    int ans = 0;
+    for (int i = 0; i < pro[p].numNode; i ++)
+    {
+        auto &t = pro[p].chain[i];
+        int insertPos = t.pos;
+        if (insertPos == -1 || insertPos == t.r) t.pos = t.l;
+        else t.pos = insertPos + 1;
+        ans += t.pos;
+    }
+    printf("%d\n", ans);
+}
+
+void op_delete(int p, int k)
+{
+    auto &t = pro[p].chain[k - 1];
+    int start = t.l, end = t.r;
+    // 删除进程接口
+    pro[p].chain.erase(pro[p].chain.begin() + k - 1);
+    pro[p].numNode --;
+    // 维护空闲段
+        // 找到插入位置
+    int loc = 0;
+    while (loc < numFreePos && freePos[loc].x < start) loc ++;
+        // 插入新段
+    freePos.insert(freePos.begin() + loc, {start, end});
+    numFreePos ++;
+        // 合并左边
+    if (loc > 0)
+    {
+        auto &prev = freePos[loc - 1];
+        auto &curr = freePos[loc];
+        if (prev.y == curr.x - 1)
+        {
+            prev.y = curr.y;
+            freePos.erase(freePos.begin() + loc);
+            loc --;   // 合并后位置左移
+            numFreePos --;
+        }
+    }
+        // 合并右边
+    if (loc <= numFreePos - 2)
+    {
+        auto &curr = freePos[loc];
+        auto &next = freePos[loc + 1];
+        if (curr.y == next.x - 1)
+        {
+            curr.y = next.y;
+            freePos.erase(freePos.begin() + loc + 1);
+            numFreePos --;
+        }
+    }
+}
+
+int main()
+{
+    cin >> n >> q;
+    freePos.push_back({0, 0x3f3f3f3f});
+    numFreePos = 1;
+    for (int i = 0; i < q; i ++)
+    {
+        string op;
+        cin >> op;
+        int p, l;
+        if (op == "new")
+        {
+            cin >> p >> l;
+            op_new(p, l);
+        }
+        else if (op == "delete")
+        {
+            cin >> p >> l;
+            op_delete(p, l);
+        }
+        else
+        {
+            cin >> p;
+            op_send(p);
+        }
+    }
+    return 0;
+}
+```
+
+### Q3 算法思路(demo3, AC)
+
+- 最大操作数 $q \leqslant 8000$，每次最大申请长度 $L_m \leqslant 5 \times 10^5$，最极端情况下，全部都是new 操作，总共需要消耗内存单元数约 $8000 \times 5 \times 10^5 = 4 \times 10^9$。
+- 使用 `long long` 来存储内存地址
+- 该题解可以通过 smqyOJ (23/23)的测试点，得分 100 分
+
+- `int` 的范围是 $[-2^{31}, 2^{31} - 1]$，约为 $[-2.15 \times 10^9, 2.15 \times 10^9]$，不足以存储 $4 \times 10^9$ 的内存地址，可能会发生溢出。
+- `long long` 的范围是 $[-2^{63}, 2^{63} - 1]$，约为 $[-9.22 \times 10^{18}, 9.22 \times 10^{18}]$，远大于 $4 \times 10^9$，因此使用 `long long` 来存储内存地址是安全的，不会发生溢出。
+
+### Q3 代码实现(demo3, AC)
+
+```C++
+#include <bits/stdc++.h>
+using namespace std;
+typedef long long LL;
+typedef pair<LL, LL> PII;
+#define x first
+#define y second
+
+LL n, q;
+vector<PII> freePos;
+int numFreePos;
+struct Node
+{
+    LL l, r, pos = -1; // pos 为当前已经存储的位置
+};
+struct Process
+{
+    int numNode = 0;
+    vector<Node> chain;
+}pro[110];
+
+void op_new(int p, int l)
+{
+    int flag = -1, min_len = 0;
+    for (int i = 0; i < numFreePos; i ++)   // 寻找最佳空闲段
+    {
+        LL start = freePos[i].x, end = freePos[i].y;
+        LL length = end - start + 1;
+        if (flag == -1 && length >= l)
+            flag = i, min_len = length;
+        if (length >= l && length < min_len)
+            flag = i, min_len = length;
+    }
+
+    LL start = freePos[flag].x, end = freePos[flag].y;
+    Node temp = {start, start + l - 1, -1};
+    pro[p].chain.push_back(temp);
+    pro[p].numNode ++;
+
+    if (end - start + 1 > l)
+        freePos[flag] = {start + l, end};
+    else
+        freePos.erase(freePos.begin() + flag), numFreePos --;
+
+    printf("%lld\n", start);
+}
+
+void op_send(int p)
+{
+    LL ans = 0;
+    for (int i = 0; i < pro[p].numNode; i ++)
+    {
+        auto &t = pro[p].chain[i];
+        LL insertPos = t.pos;
+        if (insertPos == -1 || insertPos == t.r) t.pos = t.l;
+        else t.pos = insertPos + 1;
+        ans += t.pos;
+    }
+    printf("%lld\n", ans);
+}
+
+void op_delete(int p, int k)
+{
+    auto &t = pro[p].chain[k - 1];
+    LL start = t.l, end = t.r;
+    // 删除进程接口
+    pro[p].chain.erase(pro[p].chain.begin() + k - 1);
+    pro[p].numNode --;
+    // 维护空闲段
+        // 找到插入位置
+    int loc = 0;
+    while (loc < numFreePos && freePos[loc].x < start) loc ++;
+        // 插入新段
+    freePos.insert(freePos.begin() + loc, {start, end});
+    numFreePos ++;
+        // 合并左边
+    if (loc > 0)
+    {
+        auto &prev = freePos[loc - 1];
+        auto &curr = freePos[loc];
+        if (prev.y == curr.x - 1)
+        {
+            prev.y = curr.y;
+            freePos.erase(freePos.begin() + loc);
+            loc --;   // 合并后位置左移
+            numFreePos --;
+        }
+    }
+        // 合并右边
+    if (loc <= numFreePos - 2)
+    {
+        auto &curr = freePos[loc];
+        auto &next = freePos[loc + 1];
+        if (curr.y == next.x - 1)
+        {
+            curr.y = next.y;
+            freePos.erase(freePos.begin() + loc + 1);
+            numFreePos --;
+        }
+    }
+}
+
+int main()
+{
+    cin >> n >> q;
+    freePos.push_back({0, 2e18});
+    numFreePos = 1;
+    for (int i = 0; i < q; i ++)
+    {
+        string op;
+        cin >> op;
+        int p, l;
+        if (op == "new")
+        {
+            cin >> p >> l;
+            op_new(p, l);
+        }
+        else if (op == "delete")
+        {
+            cin >> p >> l;
+            op_delete(p, l);
+        }
+        else
+        {
+            cin >> p;
+            op_send(p);
+        }
+    }
     return 0;
 }
 ```
