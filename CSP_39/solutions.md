@@ -1,6 +1,6 @@
 # CSP(第39次CCF计算机软件能力认证)
 
-> smqyOJ Judge((10/10) + (20/20) + (10/10))
+> smqyOJ Judge((10/10) + (20/20) + (10/10) + (11/43))
 
 ## Q1 蒙特卡洛
 
@@ -875,6 +875,88 @@ int main()
                 work3(k, v);
             }
         }
+    }
+    return 0;
+}
+```
+
+## Q4 造题计划(上)
+
+### Q4 算法思路(demo1, subtask1)
+
+- 建图之后，`dfs` 预处理树的层次结构(每个节点 `u` 的父节点 `p[u]` 和深度 `dep[u]`)，方便后续查询
+- 对于每一次查询 `(u, v)`，先把 `u` 和 `v` 调整到同一深度，然后同时向上跳直到 `u` 和 `v` 相遇(相遇点即为最近公共祖先 LCA)，在这个过程中用一个布尔数组 `st` 记录路径上出现过的权值，最后从 `0` 开始枚举第一个没有出现过的权值即为答案，时间复杂度为 $n ^ 2$
+- 该题解可以通过 smqyOJ (11/43) 的测试点，得分 20 分
+
+### Q4 代码实现(demo1, subtask1)
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+const int N = 1005;
+
+int n, m;
+int a[N];
+int h[N], e[N * 2], ne[N * 2], idx;
+
+void add(int u, int v)
+{
+    e[idx] = v, ne[idx] = h[u], h[u] = idx ++;
+}
+
+int p[N], dep[N];
+
+void dfs(int u, int fa)
+{
+    p[u] = fa, dep[u] = dep[fa] + 1;
+    for (int i = h[u]; ~i; i = ne[i])
+    {
+        int v = e[i];
+        if (v == fa) continue;
+        dfs(v, u);
+    }
+}
+
+bool st[N];     // st[x] 标记权值 x 是否出现过
+
+int deal(int u, int v)
+{
+    memset(st, false, sizeof st);   // Hint
+    if (dep[u] < dep[v]) swap(u, v);
+    while(dep[u] > dep[v]) st[a[u]] = true, u = p[u];
+    while (u != v) st[a[u]] = true, st[a[v]] = true, u = p[u], v = p[v];
+    st[a[u]] = true;
+
+    int res = -1;
+    for (int i = 0; i < n; i ++) 
+    {
+        if (!st[i])
+        {
+            res = i;
+            break;
+        }
+    }
+    return res;
+}
+
+int main()
+{
+    memset(h, -1, sizeof h);
+    cin >> n >> m;
+    for (int i = 1; i <= n; i ++) scanf("%d", &a[i]);
+    for (int i = 0; i < n - 1; i ++)
+    {
+        int u, v;
+        scanf("%d%d", &u, &v);
+        add(u, v), add(v, u);
+    }
+    dfs(1, 0);
+
+    for (int i = 0; i < m; i ++)
+    {
+        int u, v;
+        scanf("%d%d", &u, &v);
+        cout << deal(u, v) << endl;
     }
     return 0;
 }
