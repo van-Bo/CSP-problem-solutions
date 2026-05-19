@@ -1,6 +1,6 @@
 # CSP(第39次CCF计算机软件能力认证)
 
-> smqyOJ Judge((10/10) + (20/20) + (10/10) + (11/43))
+> smqyOJ Judge((10/10) + (20/20) + (10/10) + (11/43) + (46/46))
 
 ## Q1 蒙特卡洛
 
@@ -958,6 +958,147 @@ int main()
         scanf("%d%d", &u, &v);
         cout << deal(u, v) << endl;
     }
+    return 0;
+}
+```
+
+## Q5 造题计划(下)
+
+### Q5 算法思路(demo1, WA)
+
+- 独立排序破坏了时间顺序限制。题目中有一个非常关键的隐藏条件：一个题需要先被小 C 造完，才能被小 F 验。也就是说，如果小 C 在第 $i$ 天造题，小 F 必须在第 $j$ 天验题，且必须满足 $i \le j$
+- 该题解可以通过 smqyOJ (2/46) 的测试点，得分 0 分
+
+### Q5 代码实现(demo1, WA)
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+typedef long long LL;
+const int N = 5e+5 + 10;
+int n;
+LL m;
+LL a[N], b[N];
+
+int deal()
+{
+    int l = 0, r = n - 1;
+    while (l < r)
+    {
+        int mid = (l + r + 1) >> 1;
+        if (a[mid] + b[mid] <= m) l = mid;
+        else r = mid - 1;
+    }
+    return l + 1;
+}
+
+int main()
+{
+    cin >> n >> m;
+    for (int i = 0; i < n; i ++) scanf("%lld", &a[i]);
+    for (int i = 0; i < n; i ++) scanf("%lld", &b[i]);
+
+    sort(a, a + n), sort(b, b + n);
+    for (int i = 1; i <= n - 1; i ++) a[i] += a[i - 1];
+    for (int i = 1; i <= n - 1; i ++) b[i] += b[i - 1];
+
+    int res = deal();
+    cout << res << endl;
+    return 0;
+}
+```
+
+### Q5 算法思路(demo2, AC)
+
+- WQS 二分(Alien Trick)与反悔贪心
+- WQS 二分（处理总花费限制），假设没有总花费 $\le m$ 的限制，显然将会把所有能配对的都配对。为了控制配对数量和总花费，给每一对题目设定一个"边际代价上限" $c$。
+  - 规定：只有当一对题目的真实代价 $a_i + b_j \le c$ 时，才能进行配对。
+  - 显然，$c$ 越大，能凑出的对数就越多，相应的总花费也越大（呈单调递增关系）。
+  - 通过二分查找，找到一个最大的 $c$，使得在界限 $c$ 的约束下，凑出的题目总花费刚好 $\le m$。
+- 反悔贪心(处理 $i \le j$ 的顺序匹配)，在已知边际代价 $c$ 的情况下，我们要在这个限制内尽可能多地配对，且花费越小越好。从左到右遍历每一天：
+  - 遇到造题代价 $a_i$，将其放入一个小根堆（候选池）中。
+  - 遇到验题代价 $b_i$，看堆顶最小的 $a_j$，如果 $a_j + b_i \le c$，就把它们配对！
+  - 反悔机制：配对后，也许未来有更便宜的 $b_k$ 适合和当前的 $a_j$ 配对，所以，在配对后，向堆中压入一个反悔选项，权值为 $c - b_i$。未来如果遇到更小的 $b_k$，且满足 $(c - b_i) + b_k \le c \implies b_k \le b_i$，算法就会自动选用这个反悔选项，等价于用 $b_k$ 替换了 $b_i$，完美实现了后悔药的功能。
+- 该题解可以通过 smqyOJ (46/46) 的测试点，得分 100 分
+
+### Q5 代码实现(demo2, AC)
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+typedef long long LL;
+#define x first
+#define y second
+const int N = 5e+5 + 10;
+int n;
+LL m;
+LL a[N], b[N];
+
+struct Result
+{
+    LL cost = 0;
+    int pairs = 0;
+};
+
+struct Result deal(LL c)
+{
+    LL cost = 0;
+    int cnt_pairs = 0;
+    // 小根堆，存储 pair<代价, 类型>
+    // 类型 0 表示这是真实的 a_i；类型 1 表示这是反悔选项
+    priority_queue<pair<LL, int>, vector<pair<LL, int>>, greater<pair<LL, int>>> pq;
+
+    for (int i = 0; i < n; i ++)
+    {
+        pq.push({a[i], 0});
+
+        if (pq.size() && pq.top().x + b[i] <= c)
+        {
+            auto t = pq.top();
+            pq.pop();
+
+            cost += t.x + b[i] - c;
+            if (t.y == 0) cnt_pairs ++;
+
+            pq.push({c - b[i], 1}); // 反悔项
+        }
+    }
+    cost += 1LL * cnt_pairs * c;
+    Result res = {cost, cnt_pairs};
+    return res; 
+}
+
+int main()
+{
+    cin >> n >> m;
+    for (int i = 0; i < n; i ++) scanf("%lld", &a[i]);
+    for (int i = 0; i < n; i ++) scanf("%lld", &b[i]);
+
+    LL l = 0, r = 2e+9;
+    while (l < r)
+    {
+        LL mid = (l + r + 1) >> 1;
+        auto t = deal(mid);
+        if (t.cost <= m) l = mid;
+        else r = mid - 1;
+    }
+
+    // 处理"凸包共线(预算结余)"的情况
+        // 1. 在安全的最高标准下(一道题的造、验的精力损耗和)，能出多少道题(pairs)，花费多少精力(cost)
+    auto res_best = deal(l);
+    LL ans = res_best.pairs;    // 目前保底能凑出 ans 道题
+
+    if (l < 2e+9)
+    {   // 2. 把标准放宽一点(l + 1)，看会涌现出多少道新题
+        auto res_next = deal(l + 1);
+        LL extra_pairs = res_next.pairs - res_best.pairs;   // 造验精力损耗刚好为 l+1 的新题数量
+        if (extra_pairs > 0)
+        {   // 3. 预算结余(m - res_best.cost) 可以用来造验这些新题，每道题的造验精力损耗是 l + 1，所以最多能造验 afford 道新题
+            LL afford = (m - res_best.cost) / (l + 1);
+            ans += min(extra_pairs, afford);
+        }
+    }
+    cout << ans << endl;
     return 0;
 }
 ```
