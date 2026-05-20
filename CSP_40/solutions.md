@@ -1,6 +1,6 @@
 # CSP(第40次CCF计算机软件能力认证)
 
-> smqyOJ Judge((12/12) + (23/23) + (23/23) + (6/30) + 35)
+> smqyOJ Judge((12/12) + (23/23) + (23/23) + (6/30) + (13/53))
 
 ## Q1 集合
 
@@ -494,5 +494,137 @@ int main()
     }
     cout << res << endl;
     return 0;
+}
+```
+
+## Q5 数据抢修
+
+### Q5 算法思路(demo1, subtask1)
+
+- 使用深度优先搜索(DFS)回溯的方式，暴力枚举所有元素的分配方案
+- 暴力策略转化：放球入盒（图的染色）。思路是“枚举把 $n$ 个元素分配到 $m$ 个集合”，这可以通过 DFS 实现：
+  - 把数据包里的元素 `current_pkg[turn]` 依次拿出来
+  - 对于每个元素 `val`，需要遍历所有目前已经存在的集合 `subsets[i]`：如果 `val` 和集合里现有的所有元素异或值都 $\ge W$(不冲突)，就可以尝试把它放进这个集合，接着往下递归
+  - 同时，总是允许这个元素新开一个集合自己待着
+  - 记录下能容纳所有元素的"最少集合数"。在搜索时，加一个简单的剪枝：如果当前尝试的集合数量 `subsets.size()` 已经大于等于已经找到的最小值 `min_cost`，直接回溯，不继续往下搜索
+- 该题解可以通过 smqyOJ (13/53) 的数据点，得分 20 分
+
+### Q5 代码实现(demo1, subtask1)
+
+```C++
+#include <bits/stdc++.h>
+using namespace std;
+typedef long long LL;
+const int N = 5e+5 + 10;
+
+int n, w, q;
+vector<int> pkgs[N];    // 数据包
+bool st[N]; // st[k] 数据包 k 是否处于激活状态
+int cost[N]; // cost[k] 数据包 K 的维护代价
+LL total_cost;  // 维护所有数据包的维护代价之和
+
+int min_cost;
+vector<int> current_pkg;
+vector<vector<int>> subsets;
+
+void dfs(int turn)
+{
+    // 剪枝
+    if (subsets.size() >= (long unsigned int)min_cost) return;
+    // 遍历完当前需处理的数据包，结束递归
+    if ((long unsigned int)turn == current_pkg.size())
+    {
+        min_cost = subsets.size();
+        return;
+    }
+
+    int val = current_pkg[turn];
+
+    for (long unsigned int i = 0; i < subsets.size(); i ++)
+    {
+        bool ok = true;
+        for (long unsigned int j = 0; j < subsets[i].size(); j ++)
+        {
+            if ((subsets[i][j] ^ val) < w)
+            {
+                ok = false;
+                break;
+            }
+        }
+
+        if (ok)
+        {
+            subsets[i].push_back(val);
+            dfs(turn + 1);
+            subsets[i].pop_back();
+        }
+    }
+    subsets.push_back({val});
+    dfs(turn + 1);
+    subsets.pop_back();
+}
+
+int deal(int k)     // 获取编号为 k 的数据包的维护代价
+{
+    if (pkgs[k].empty()) return 0;
+    min_cost = pkgs[k].size();
+    current_pkg = pkgs[k];
+
+    subsets.clear();
+    dfs(0);
+    return min_cost;
+}
+
+int main()
+{
+    cin >> n >> w;
+    for (int i = 1; i <= n; i ++)
+    {
+        st[i] = true;
+        int cnt;
+        scanf("%d", &cnt);
+        for (int j = 0; j < cnt; j ++)
+        {
+            int x;
+            scanf("%d", &x);
+            pkgs[i].push_back(x);
+        }
+        cost[i] = deal(i);
+        total_cost += cost[i];
+    }
+
+    cin >> q;
+    for (int i = 0; i < q; i ++)
+    {
+        int op;
+        scanf("%d", &op);
+        if (op == 1)
+        {
+            int u, x;
+            scanf("%d%d", &u, &x);
+            pkgs[u].push_back(x);
+
+            total_cost -= cost[u];
+            cost[u] = deal(u);
+            total_cost += cost[u];
+        }
+        else if (op == 2)
+        {
+            int u, v;
+            scanf("%d%d", &u, &v);
+            for (int x : pkgs[v]) pkgs[u].push_back(x);
+            st[v] = false;
+            pkgs[v].clear();
+
+            total_cost -= cost[v];
+            total_cost -= cost[u];
+            cost[u] = deal(u);
+            total_cost += cost[u];
+        }
+        else
+        {
+            printf("%lld\n", total_cost);
+        }
+    }
 }
 ```
