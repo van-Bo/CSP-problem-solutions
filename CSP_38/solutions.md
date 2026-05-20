@@ -1,6 +1,6 @@
 # 第38次CCF计算机软件能力认证
 
-> smqyOJ Judge((10/10) + )
+> smqyOJ Judge((10/10) + (20/20) + )
 
 ## Q1 正态分布
 
@@ -126,6 +126,140 @@ int main()
         int col = baseline_100 % 10 + 1;
         printf("%d %d\n", row, col);
     }
+    return 0;
+}
+```
+
+## Q2 机器人复健指南
+
+### Q2 算法思路(demo1, WA)
+
+- 使用深度优先搜索(DFS) 配合简单的 `bool` 访问数组求解，虽然能通过题面中给定的简单测试样例，但在更复杂的隐藏案例中会得到错误答案。这里踩到了一个在算法竞赛中非常经典的坑：使用纯粹的 DFS(深度优先搜索)配合简单的 `bool` 访问数组来求最短可达步数
+- DFS 逻辑下的错因:
+  - 问题出在`if (st[newX][newY]) continue;`
+  - 在深度优先搜索中，一旦我们访问过某个方格，就会把它标记为 `true`，防止无限死循环。但在"限定步数可达性"的问题中，这会导致一条绕远的路径，堵死了一条更优的路径。
+- 举个具体的例子：
+  - 假设要去方格 `C`，步数限制 `k = 3`
+  - DFS 首先沿着一条较长的路径探测，花了 3 步到达 `C`。此时 `st[C] = true`。因为到达了步数上限，DFS 停止从 `C` 继续向外扩展。
+  - 随后的 DFS 回溯过程中，沿着另一条捷径探测，仅仅花了 1 步就再次来到了 `C`。
+  - 按照常理，现在还剩 2 步，完全可以从 `C` 出发继续探索周围的方格。但是，由于 `C` 已经被之前的长路径标记为 `true`，程序会直接 `continue` 跳过它，这就导致原本在步数限制内可以到达的方格，被错误地忽略了！
+- 该题解可以通过 smqyOJ (2/20) 的数据点，得分 0 分
+
+### Q2 代码实现(demo1, WA)
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+const int N = 110;
+typedef pair<int, int> PII;
+#define x first
+#define y second
+int n, k, p, q;
+bool st[N][N];
+
+PII direction[] = {
+    {-2, 1}, {-1, 2}, {1, 2}, {2, 1}, 
+    {-2, -1}, {-1, -2}, {1, -2}, {2, -1}   
+};
+
+void search(PII point, int step)
+{
+    if (step > k) return;
+    int u = point.x, v = point.y;
+    st[u][v] = true;
+
+    for (int i = 0; i < 8; i ++)
+    {
+        int dx = direction[i].x, dy = direction[i].y;
+        int newX = u + dx, newY = v + dy;
+
+        if (newX < 0 || newX >= n || newY < 0 || newY >= n) continue;   // 越界
+        if (st[newX][newY]) continue;   // 已访问过 (Bug Point)
+        search({newX, newY}, step + 1);
+    }
+}
+
+int main()
+{
+    cin >> n >> k >> p >> q;
+
+    search({p - 1, q - 1}, 0);
+    int cnt = 0;
+    for (int i = 0; i < n; i ++)
+        for (int j = 0; j < n; j ++)
+            if (st[i][j]) 
+                cnt ++;
+    cout << cnt << endl;
+
+    return 0;
+}
+```
+
+### Q2 算法思路(demo2, AC)
+
+- 使用广度优先搜索(BFS)来求解最短可达步数问题。BFS 的核心思想是层次遍历，能够保证在访问一个方格时，已经以最少的步数到达了它。这样就不会出现 DFS 中的"过早标记访问"问题，因为 BFS 是按照步数层层推进的
+- 在 BFS 中，为了保证每个节点绝对只进队一次，必须在将它 `push` 进队列的瞬间，立刻将其标记为已访问 `st[point.x][point.y] = true`。
+- 该题解可以通过 smqyOJ (20/20) 的数据点，得分 100 分
+
+### Q2 代码实现(demo2, AC)
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+const int N = 110;
+typedef pair<int, int> PII;
+#define x first
+#define y second
+int n, k, p, q;
+bool st[N][N];
+int dist[N][N];
+
+PII direction[] = {
+    {-2, 1}, {-1, 2}, {1, 2}, {2, 1}, 
+    {-2, -1}, {-1, -2}, {1, -2}, {2, -1}   
+};
+
+void search(PII point)
+{
+    queue<PII> bfs_queue;
+    bfs_queue.push(point);
+    dist[point.x][point.y] = 0;
+    st[point.x][point.y] = true;
+
+    while (bfs_queue.size())
+    {
+        PII t = bfs_queue.front();
+        bfs_queue.pop();
+
+        if (dist[t.x][t.y] == k) continue;  // 停止向队列中纳入新的点(后续的点 dist 值均大于 k)
+
+        for (int i = 0; i < 8; i ++)
+        {
+            int dx = direction[i].x, dy = direction[i].y;
+            int u = dx + t.x, v = dy + t.y;
+            if (u < 0 || u >= n || v < 0 || v >= n) continue;   // 越界
+            if (!st[u][v]) 
+            {
+                dist[u][v] = dist[t.x][t.y] + 1;
+                st[u][v] = true;
+                bfs_queue.push({u, v});
+            }
+        }
+    }
+}
+
+int main()
+{
+    cin >> n >> k >> p >> q;
+
+    search({p - 1, q - 1});
+    int cnt = 0;
+    for (int i = 0; i < n; i ++)
+        for (int j = 0; j < n; j ++)
+            if (st[i][j]) 
+                cnt ++;
+    cout << cnt << endl;
+
     return 0;
 }
 ```
