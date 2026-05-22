@@ -263,3 +263,396 @@ int main()
     return 0;
 }
 ```
+
+## Q3 消息解码
+
+### Q3 算法思路(demo1, subtask-80%, TLE)
+
+- `deque<pus> nums` 用于存储历史消息信息，每个元素的意义为 `<代号的数字表示，代号>`
+- 所有的代号均有数字表示，散列值便是根据数字表示计算出来的，此外，典型代号还有短数字表示
+- `getHash` 函数用于计算数字表示所对应的 `k` 位散列值，注意类型的数据溢出(使用 `unsigned __int128`)，乘除 $2^n$ 可以采用移位运算，取模操作可以通过 `&` 操作等效
+- `deal0` 中对于接收方代号字段、发送方代号字段的是否为散列值的判断，直接通过与 $2^{25}$ 的比较来实现。只比对字段中从低位开始的 `25` 号位 `x[25]` 是否为 `1` ，此处存在 `Bug`
+  - 在 `deal0` 中，通过 `if (rcv[2] == '0')` 来区分散列值。以为短数字加上 $2^{25}$ 就只会改变那一个比特位，所以直接检查那个位就行了。
+  - 大错特错！ 短数字本身最大可达 $\approx 2.68 \times 10^8$，远远超过了 $2^{25} \approx 3.35 \times 10^7$。因此它不仅仅会影响第 25 位，还会向高位进位。
+- 确定好本次输出的代号情况之后，才对 `nums` 进行填充操作，防止对输出代号的确定操作造成干扰
+- 该题解可以通过 smqyOJ (8/10) 的数据点，得分 80 分
+
+### Q3 代码实现(demo1, subtask-80%, TLE)
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+typedef unsigned long long ull;
+typedef pair<ull, string> pus;
+#define x first
+#define y second
+int n;
+
+deque<pus> nums;    // <代号的数字表示，代号>
+
+ull getHash(ull v, int k)   // 获取数字表示 v 的 k 位散列值
+{
+    unsigned __int128 prod = (unsigned __int128)v * 47055833459ull;
+    unsigned __int128 q = prod >> (64 - k);
+    return (ull)(q & ((1ull << k) - 1));
+}
+
+string getNameFromShortNum(ull v)   // 从短数字表示转换为代号
+{
+    string res;
+    ull mark;
+    for (int i = 6; i >= 4; i --)   // 处理第 6~4 个字符
+    {
+        res = (char)('A' + (v % 26)) + res;
+        v /= 26;
+    }
+    // 处理第 3 个字符
+    res = (char)('0' + (v % 10)) + res;
+    v /= 10;
+    // 处理第 2 个字符
+    mark = v % 36;
+    if (mark >= 0 && mark <= 9) res = (char)('0' + mark) + res;
+    else res = (char)('A' + mark - 10) + res;
+    v /= 36;
+    // 处理第 1 个字符
+    mark = v % 37;
+    if (mark >= 1 && mark <= 10) res = (char)('0' + mark - 1) + res;
+    else if (mark >= 11 && mark <= 36) res = (char)('A' + mark - 11) + res;
+
+    return res;
+}
+
+string getNameFromLongNum(ull v)    // 从长数字表示转换为代号
+{
+    string res;
+    ull mark;
+    for (int i = 11; i >= 1; i --)
+    {
+        mark = v % 38;
+        if (mark == 0) 
+        {
+            v /= 38;
+            continue;
+        }
+        else if (mark == 37) res = '_' + res;
+        else if (mark >= 1 && mark <= 10) res = (char)('0' + mark - 1) + res;
+        else res = (char)('A' + mark - 11) + res;
+        v /= 38;
+    }
+    return res;
+}
+
+string hashToNum(ull v, int k)  // 通过 k 位散列值 v 检查历史信息，以获取代号
+{
+    bool flag = false;
+    string res = "";
+    int len = nums.size();
+    for (int i = 0; i < len; i ++)
+    {
+        if (getHash(nums[i].x, k) == v)
+        {
+            flag = true;
+            res = nums[i].y;
+            break;
+        }
+    }
+    if (flag) return "#" + res;
+    else return "###";
+}
+
+ull getLongNumFromName(string s)
+{
+    ull res = 0;
+    int len = s.length();
+    if (len < 11)   // 空格填充，保证长度达到 11 位 
+    {
+        for (int i = 0; i < 11 - len; i ++) s += ' ';
+    }
+
+    for (int i = 0; i < 11; i ++)
+    {
+        res *= 38;
+        if (s[i] == ' ') res += 0;
+        else if (s[i] == '_') res += 37;
+        else if (s[i] >= '0' && s[i] <= '9') res += s[i] - '0' + 1;
+        else res += s[i] - 'A' + 11;
+    }
+    return res;
+}
+
+void deal1(string s)
+{
+    string n1 = s.substr(1, 58), n2 = s.substr(59, 12), state = s.substr(71, 1);
+
+    string res1, res2, res3;
+    ull v1, v2;
+    v1 = stoull(n1, nullptr, 2);
+    res1 = getNameFromLongNum(v1);
+
+    v2 = stoull(n2, nullptr, 2);
+    res2 = hashToNum(v2, 12);
+
+    nums.push_front({v1, res1});
+
+    if (state == "1")
+        cout << res1 << " " << res2 << "\n";
+    else
+        cout << res2 << " " << res1 << "\n";
+}
+
+void deal0(string s)
+{
+    string rcv = s.substr(1, 28), snd = s.substr(29, 28), loc = s.substr(57, 15);
+
+    string res1, res2, res3;
+    ull v1 = stoull(rcv, nullptr, 2), v2 = stoull(snd, nullptr, 2);
+    bool flag1 = false, flag2 = false;  // 标记是否为短数字表示
+
+    if (v1 < (1ull << 25))  // rcv 为 25 位散列值
+        res1 = hashToNum(v1, 25);
+    else    // rcv 为 典型代号的短数字表示 
+    {
+        flag1 = true;
+        v1 -= 1ull << 25;
+        res1 = getNameFromShortNum(v1);
+        v1 = getLongNumFromName(res1);
+    }
+
+    if (v2 < (1ull << 25))  // rcv 为 25 位散列值
+        res2 = hashToNum(v2, 25);
+    else    // rcv 为 典型代号的短数字表示 
+    {
+        flag2 = true;
+        v2 -= 1ull << 25;
+        res2 = getNameFromShortNum(v2);
+        v2 = getLongNumFromName(res2);
+    }
+
+    ull locNum = stoull(loc, nullptr, 2);
+    if (locNum == 0) res3 = "";
+    else res3 = to_string(locNum);
+
+    if (flag1) nums.push_front({v1, res1});
+    if (flag2) nums.push_front({v2, res2});
+
+    if (res3 == "")
+        cout << res1 << " " << res2 << "\n";
+    else
+        cout << res1 << " " << res2 << " " << res3 << "\n";
+}
+
+int main()
+{
+    scanf("%d", &n);
+    for (int i = 0; i < n; i ++)
+    {
+        string s;
+        cin >> s;
+        if (s[0] == '0') deal0(s);
+        else deal1(s);
+    }
+    return 0;
+}
+```
+
+### Q3 算法思路(demo2, AC)
+
+- `TLE` 的罪魁祸首是 `hashToNum` 函数以及用于存储历史代号的 `deque<pus> nums`
+
+```cpp
+string hashToNum(ull v, int k) {
+    bool flag = false;
+    string res = "";
+    int len = nums.size();
+    for (int i = 0; i < len; i ++) {
+        if (getHash(nums[i].x, k) == v) { ... }
+    }
+}
+```
+
+- **时间复杂度爆炸**：测试点 9 和 10 的数据规模是 $N = 10^5$。在最坏情况下(比如大量散列值匹配失败)，每收到一条散列值消息，都要遍历一遍长度可能接近 $10^5$ 的 `nums` 队列，并在循环内进行极耗时的 `__int128` 乘法。$10^5 \times 10^5 = 10^{10}$ 次运算。这在 `C++` 中，必定 `TLE`！
+- **破局方案**：空间换时间(哈希表)，既然散列的位数只有两种情况(12 位 和 25 位)，完全可以把每次新得到的确切代号，提前算出它的 12 位散列值和 25 位散列值，并把它们存入哈希表(`std::unordered_map`)中。这样一来，查询的时间复杂度就会从 $O(N)$ 暴降到 $O(1)$。
+- 更绝妙的是，使用哈希表天然完美契合题目的两种"冲突处理"规则：
+  - "如果有多个代号散列值符合，使用最后收到的"：在 `map[hash_val] = name` 时，新的记录会直接覆盖掉旧的记录，自然保留的就是"最后收到的"。
+  - "如果同一条消息中收发双方的散列值都符合，使用发送方的"：只需要在更新哈希表时，先更新接收方，再更新发送方。这样如果二者冲突，发送方就会把接收方覆盖掉。
+- 该题解可以通过 smqyOJ (10/10) 的数据点，得分 100 分
+
+### Q3 代码实现(demo2, AC)
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+typedef unsigned long long ull;
+typedef pair<ull, string> pus;
+#define x first
+#define y second
+int n;
+
+unordered_map<ull, string> map25;
+unordered_map<ull, string> map12;
+
+ull getHash(ull v, int k)   // 获取数字表示 v 的 k 位散列值
+{
+    unsigned __int128 prod = (unsigned __int128)v * 47055833459ull;
+    unsigned __int128 q = prod >> (64 - k);
+    return (ull)(q & ((1ull << k) - 1));
+}
+
+string getNameFromShortNum(ull v)
+{
+    string res;
+    ull mark;
+    for (int i = 6; i >= 4; i --)   // 处理第 6~4 个字符
+    {
+        res = (char)('A' + (v % 26)) + res;
+        v /= 26;
+    }
+    // 处理第 3 个字符
+    res = (char)('0' + (v % 10)) + res;
+    v /= 10;
+    // 处理第 2 个字符
+    mark = v % 36;
+    if (mark >= 0 && mark <= 9) res = (char)('0' + mark) + res;
+    else res = (char)('A' + mark - 10) + res;
+    v /= 36;
+    // 处理第 1 个字符
+    mark = v % 37;
+    if (mark >= 1 && mark <= 10) res = (char)('0' + mark - 1) + res;
+    else if (mark >= 11 && mark <= 36) res = (char)('A' + mark - 11) + res;
+
+    return res;
+}
+
+string getNameFromLongNum(ull v)
+{
+    string res;
+    ull mark;
+    for (int i = 11; i >= 1; i --)
+    {
+        mark = v % 38;
+        if (mark == 0) 
+        {
+            v /= 38;
+            continue;
+        }
+        else if (mark == 37) res = '_' + res;
+        else if (mark >= 1 && mark <= 10) res = (char)('0' + mark - 1) + res;
+        else res = (char)('A' + mark - 11) + res;
+        v /= 38;
+    }
+    return res;
+}
+
+string hashToNum(ull v, int k)  // 根据 k 位散列值 v 获取代号
+{
+    if (k == 25)
+    {
+        if (map25.count(v)) return "#" + map25[v];
+    }
+    else if (k == 12)
+    {
+        if (map12.count(v)) return "#" + map12[v];
+    }
+    return "###";
+}
+
+ull getLongNumFromName(string s)
+{
+    ull res = 0;
+    int len = s.length();
+    if (len < 11)   // 空格填充，保证长度达到 11 位 
+    {
+        for (int i = 0; i < 11 - len; i ++) s += ' ';
+    }
+
+    for (int i = 0; i < 11; i ++)
+    {
+        res *= 38;
+        if (s[i] == ' ') res += 0;
+        else if (s[i] == '_') res += 37;
+        else if (s[i] >= '0' && s[i] <= '9') res += s[i] - '0' + 1;
+        else res += s[i] - 'A' + 11;
+    }
+    return res;
+}
+
+void add_history(ull v, string s)   // 代号的数字表示 k，代号 s 存入历史记录
+{
+    map25[getHash(v, 25)] = s;
+    map12[getHash(v, 12)] = s;
+}
+
+void deal1(string s)
+{
+    string n1 = s.substr(1, 58), n2 = s.substr(59, 12), state = s.substr(71, 1);
+
+    string res1, res2, res3;
+    ull v1, v2;
+    v1 = stoull(n1, nullptr, 2);
+    res1 = getNameFromLongNum(v1);
+
+    v2 = stoull(n2, nullptr, 2);
+    res2 = hashToNum(v2, 12);
+
+    add_history(v1, res1);
+
+    if (state == "1")
+        cout << res1 << " " << res2 << "\n";
+    else
+        cout << res2 << " " << res1 << "\n";
+}
+
+void deal0(string s)
+{
+    string rcv = s.substr(1, 28), snd = s.substr(29, 28), loc = s.substr(57, 15);
+
+    string res1, res2, res3;
+    ull v1 = stoull(rcv, nullptr, 2), v2 = stoull(snd, nullptr, 2);
+    bool flag1 = false, flag2 = false;  // 标记是否为短数字表示
+
+    if (v1 < (1ull << 25))  // rcv 为 25 位散列值
+        res1 = hashToNum(v1, 25);
+    else    // rcv 为 典型代号的短数字表示 
+    {
+        flag1 = true;
+        v1 -= 1ull << 25;
+        res1 = getNameFromShortNum(v1);
+        v1 = getLongNumFromName(res1);
+    }
+
+    if (v2 < (1ull << 25))  // rcv 为 25 位散列值
+        res2 = hashToNum(v2, 25);
+    else    // rcv 为 典型代号的短数字表示 
+    {
+        flag2 = true;
+        v2 -= 1ull << 25;
+        res2 = getNameFromShortNum(v2);
+        v2 = getLongNumFromName(res2);
+    }
+
+    ull locNum = stoull(loc, nullptr, 2);
+    if (locNum == 0) res3 = "";
+    else res3 = to_string(locNum);
+
+    if (flag1) add_history(v1, res1);
+    if (flag2) add_history(v2, res2);
+
+    if (res3 == "")
+        cout << res1 << " " << res2 << "\n";
+    else
+        cout << res1 << " " << res2 << " " << res3 << "\n";
+}
+
+int main()
+{
+    scanf("%d", &n);
+    for (int i = 0; i < n; i ++)
+    {
+        string s;
+        cin >> s;
+        if (s[0] == '0') deal0(s);
+        else deal1(s);
+    }
+    return 0;
+}
+```
