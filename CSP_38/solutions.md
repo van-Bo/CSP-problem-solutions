@@ -1,6 +1,6 @@
 # 第38次CCF计算机软件能力认证
 
-> smqyOJ Judge((10/10) + (20/20) + )
+> smqyOJ Judge((10/10) + (20/20) + (10/10) + (8/20))
 
 ## Q1 正态分布
 
@@ -653,6 +653,83 @@ int main()
         if (s[0] == '0') deal0(s);
         else deal1(s);
     }
+    return 0;
+}
+```
+
+## Q4 月票发行
+
+### Q4 算法思路(demo1, subtask1)
+
+- 对于子任务1，合法的序列中一定包含一个 `cspark` 和一个 `ccf`，受限于长度的限制，可能还会存在一个 `ccf`
+- `match1(p1, p2)` 表示 `ccf` 开始于 `p1` 位置，`cspark` 开始于 `p2` 位置的情况下，返回合序列的个数。其中对于形如 `*ccf*ccf*cspark*` 的序列，会重复计算一次，最终需要在所维护的答案 `ans` 中减去重复统计的个数。
+- `match2(p1, p2, p3)` 表示 `ccf` 开始于 `p1` 位置，后一个 `ccf` 开始于 `p2` 位置，`cspark` 开始于 `p2` 位置的情况下，返回形如 `*ccf*ccf*cspark*` 的合法序列的个数。
+- 该题解可以通过 smqyOJ (8/20) 的数据点，得分 30 分
+
+### Q4 代码实现(demo1, subtask1)
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+typedef long long LL;
+const int mod = 998244353;
+
+int n, m;
+bool st[20];
+int power26[20];
+
+int match1(int p1, int p2)
+{
+    for (int i = p1; i <= p1 + 2; i ++) if (st[i]) return 0;
+    for (int i = p2; i <= p2 + 5; i ++) if (st[i]) return 0;
+
+    int empty = n;
+    for (int i = 1; i <= n; i ++)
+        if (st[i] || (i >= p1 && i <= p1 + 2) || (i >= p2 && i <= p2 + 5))
+            empty --;
+    return power26[empty];
+}
+
+int match2(int p1, int p2, int p3)
+{
+    for (int i = p1; i <= p1 + 2; i ++) if (st[i]) return 0;
+    for (int i = p2; i <= p2 + 2; i ++) if (st[i]) return 0;
+    for (int i = p3; i <= p3 + 5; i ++) if (st[i]) return 0;
+
+    int empty = n;
+    for (int i = 1; i <= n; i ++)
+        if (st[i] || (i >= p1 && i <= p1 + 2) || (i >= p2 && i <= p2 + 2) || (i >= p3 && i <= p3 + 5))
+            empty --;
+    return power26[empty];
+}
+
+int main()
+{   
+    // 预处理生成 26^k
+    power26[0] = 1;
+    for (int i = 1; i <= 15; i ++) power26[i] = 1LL * power26[i - 1] * 26 % mod;
+
+    cin >> n >> m;
+    for (int i = 0; i < m; i ++) 
+    {
+        int x;
+        cin >> x;
+        st[x] = true;  // 标记 #
+    }
+
+    int ans = 0;
+    // check ccf*cspark format
+    for (int i = 1; i <= n - 2; i ++)
+        for (int j = i + 3; j <= j - 5; j ++)
+            ans = ((LL)ans + match1(i, j)) % mod;
+    
+    // check ccf*ccf*cspark format
+    for (int i = 1; i <= n - 2; i ++)
+        for (int j = i + 3; j <= n - 2; j ++)
+            for (int k = j + 3; k <= n - 5; k ++)
+                ans = ((LL)ans - match2(i, j, k)) % mod;
+    
+    cout << ans << endl;
     return 0;
 }
 ```
