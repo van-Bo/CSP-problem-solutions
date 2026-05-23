@@ -1,6 +1,6 @@
 # 第38次CCF计算机软件能力认证
 
-> smqyOJ Judge((10/10) + (20/20) + (10/10) + (8/20))
+> smqyOJ Judge((10/10) + (20/20) + (10/10) + (8/20) + (8/35))
 
 ## Q1 正态分布
 
@@ -730,6 +730,98 @@ int main()
                 ans = ((LL)ans - match2(i, j, k)) % mod;
     
     cout << ans << endl;
+    return 0;
+}
+```
+
+## Q5 博物馆
+
+### Q5 算法思路(demo1, subtask1)
+
+- 使用并查集维护去除施工点后剩余的连通块信息。
+- 对于每条攻略 `tour`，枚举施工点 `hack`，构建去除该施工点后的并查集，然后统计该攻略中涉及的博物馆所在连通块的数量(`cnt[px]` 标记以 `px` 为根的连通块中的节点数量)，取最大值即为该施工点下攻略的最优选择。
+- 对所有施工点 `hack` 的最优选择求和，即为该攻略的答案。
+- 该题解可以通过 smqyOJ (8/35) 的数据点，得分 15 分
+
+### Q5 代码实现(demo1, subtask1)
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+typedef pair<int, int> PII;
+#define x first
+#define y second
+const int N = 1e+5 + 10;
+
+int n, m, q;
+PII e[N * 2];
+int p[N];
+vector<int> lists[N];
+int cnt[N];
+
+int find(int x)
+{
+    if (p[x] != x) p[x] = find(p[x]);
+    return p[x];
+}
+
+int deal(int tour)  // 对于攻略 tour，最优选择下可以游览博物馆的和值
+{
+    int ans = 0;
+    for (int hack = 1; hack <= n; hack ++) // 枚举施工 hack 点
+    {
+        for (int i = 1; i <= n; i ++) p[i] = i;
+
+        for (int i = 0; i < m; i ++)    // 构建去除 hack 施工点的并查集
+        {
+            int u = e[i].x, v = e[i].y;
+            if (u == hack || v == hack) continue;
+
+            int pu = find(u), pv = find(v);
+            if (pu != pv) p[pv] = pu;
+        }
+
+        memset(cnt, 0, sizeof cnt);
+        for (auto x : lists[tour])
+        {
+            int px = find(x);
+            if (px == hack) continue;
+            cnt[px] ++;
+        }
+        int maxV = 0;
+        for (int i = 1; i <= n; i ++)
+            maxV = max(maxV, cnt[i]);
+        ans += maxV;
+    }
+    return ans;
+}
+
+int main()
+{
+    scanf("%d%d%d", &n, &m, &q);
+    for (int i = 0; i < m; i ++)
+    {
+        int u, v;
+        scanf("%d%d", &u, &v);
+        e[i] = {u, v};
+    }
+
+    for (int i = 0; i < q; i ++)
+    {
+        int x;
+        scanf("%d", &x);
+        for (int j = 0; j < x; j ++)
+        {
+            int value;
+            scanf("%d", &value);
+            lists[i].push_back(value);
+        }
+    }
+
+    for (int i = 0; i < q; i ++) // 枚举攻略 i
+    {
+        cout << deal(i) << endl;
+    }
     return 0;
 }
 ```
