@@ -1,6 +1,6 @@
 # CSP(第41次CCF计算机软件能力认证)
 
-> smqyOJ Judge((10/10) + (22/22) + (23/23))
+> smqyOJ Judge((10/10) + (22/22) + (23/23) + (13/25))
 
 ## Q1 平衡数
 
@@ -594,5 +594,216 @@ int main()
         }
     }
     return 0;
+}
+```
+
+## Q4 异或
+
+### Q4 算法思路(demo1, TLE)
+
+- 模拟处理，`work(u, v)` 计算 `u` 和 `v` 的 `k` 进制表示对应位的和 `mod k` 的结果
+- `deal1(l, r, v)` 对区间 `[l, r]` 的每个数执行 `work(a[i], v)` 的操作
+- `deal2(l, r)` 计算区间 `[l, r]` 的每个数的阶乘的异或结果，阶乘的计算也需要使用 `work` 函数来处理
+- 该题解可以通过 smqyOJ (1/25)的测试点，得分 0 分
+
+### Q4 代码实现(demo1, TLE)
+
+```C++
+#include <bits/stdc++.h>
+using namespace std;
+typedef long long LL;
+const int N = 5e+5 + 10;
+
+int n, m, k;
+LL a[N];
+
+LL work(LL u, LL v)
+{
+    LL res = 0;
+    LL power = 1;
+    while (u || v)
+    {
+        LL du = u % k, dv = v % k;
+        LL sumBit = (du + dv) % k;
+        res += sumBit * power;
+
+        power = power * k;
+        u /= k, v /= k;
+    }
+    return res;
+}
+
+void deal1(int l, int r, LL v)
+{
+    for (int i = l; i <= r; i ++)
+        a[i] = work(a[i], v);
+}
+
+LL deal2(int l, int r)
+{
+    LL res = 0;
+    for (int i = l; i <= r; i ++)
+    {
+        LL fai = 0;
+        for (int j = 1; j <= a[i]; j ++)
+            fai = work(fai, j);
+        res = work(res, fai);
+    }
+    return res;
+}
+
+int main()
+{
+    scanf("%d%d%d", &n, &m, &k);
+    for (int i = 1; i <= n; i ++) scanf("%lld", &a[i]);
+    for (int i = 0; i < m; i ++)
+    {
+        int op;
+        scanf("%d", &op);
+        if (op == 1)
+        {
+            int l, r;
+            LL v;
+            scanf("%d%d%lld", &l, &r, &v);
+            deal1(l, r, v);
+        }
+        else
+        {
+            int l, r;
+            scanf("%d%d", &l, &r);
+            LL res = deal2(l, r);
+            printf("%lld\n", res);
+        }
+    }
+}
+```
+
+### Q4 算法思路(demo2, subtask1&2)
+
+- $f(n) = 0 \oplus_k 1 \oplus_k 2 \oplus_k \dots \oplus_k n$
+- 优化 `f(n)` 函数的求解(把 $O(n)$ 的循环优化成 $O(\log_k n)$)，优化思路借鉴 $k$ 进制列加法的模拟过程
+- 假设在 $k = 3$ 的情况下，列竖式计算 `f(n)` 的过程如下所示：
+
+|value|pos 0|pos 1|pos 2|pos 3| ...
+|-----|-----|-----|-----|-----|-----
+|  0  |  0  |  0  |  0  |  0  | ...
+|  1  |  1  |  0  |  0  |  0  | ...
+|  2  |  2  |  0  |  0  |  0  | ...
+|  3  |  0  |  1  |  0  |  0  | ...
+|  4  |  1  |  1  |  0  |  0  | ...
+|  5  |  2  |  1  |  0  |  0  | ...
+|  6  |  0  |  2  |  0  |  0  | ...    
+|  7  |  1  |  2  |  0  |  0  | ...
+|  8  |  2  |  2  |  0  |  0  | ...
+|  9  |  0  |  0  |  1  |  0  | ...
+| 10  |  1  |  0  |  1  |  0  | ...
+| 11  |  2  |  0  |  1  |  0  | ...
+| 12  |  0  |  1  |  1  |  0  | ...
+| 13  |  1  |  1  |  1  |  0  | ...
+| 14  |  2  |  1  |  1  |  0  | ...
+| 15  |  0  |  2  |  1  |  0  | ...
+
+- 若计算 `f(15)`，则进行如上的列式，从 `pos 0` 开始，纵向求和得到 `sumBit`，并将 `sumBit % k` 作为 `f(15)` 在 `pos 0` 的值，依此类推，计算其他位的值
+- 可以发现，从上至下，`pos 0` 的值的变化周期为 $k$，从 `0` 到 `k-1` 循环往复
+- `pos j` 的值的变动期限(该期限内位值不变)为 $k^j$，例如，`3` 进制下，`pos 1` 的值在 $[0, 2]$ 内为 `0`，在 $[3, 5]$ 内为 `1`，在 $[6, 8]$ 内为 `2`，在 $[9, 11]$ 内为 `0`，在 $[12, 14]$ 内为 `1`，在 $[15, 17]$ 内为 `2`，以此类推
+- 假定 $n$ 的 $k$ 进制表示为 $d_m d_{m-1} \dots d_1 d_0$
+- 考虑 `pos 0` 处和值的计算：
+  - $0 + 1 + 2 + \dots + (k-1) = \frac{(k-1)k}{2}$，题目中 **$k$ 为奇数**，所以 $\frac{(k-1)k}{2}$ 是 $k$ 的倍数，该完整往复区间的和值 $\mod k$ 的结果为 `0`
+  - 当 $n$ 不在完整往复区间的末尾时，剩余部分的和值 $\mod k$ 的结果为 $(0 + 1 + 2 + \dots + d_0) \mod k = \frac{d_0 \cdot (d_0 + 1)}{2} \mod k$
+- 考虑 `pos j` 处和值的计算：
+  - 每 $k^j$ 个数为一个值的变动期限，这 $k^j$ 个数的和值一定是 $k$ 的倍数，所以每个值的变动期限内的和值 $\mod k$ 的结果为 `0`
+  - 当 $n$ 不在完整往复区间的末尾时，剩余部分的和值 $\mod k$ 的结果为 $d_j \cdot (n \mod k^j + 1) \mod k$，其中 $d_j$ 是 $n$ 在 `pos j` 处的值，$(n \mod k^j + 1)$ 在模 $k$ 的意义下等效为 $d_0 + 1$，其中 $d_0$ 是 $n$ 在 `pos 0` 处的值
+- 该题解可以通过 smqyOJ (13/25)的测试点，得分 50 分
+
+### Q4 代码实现(demo2, subtask1&2)
+
+```C++
+#include <bits/stdc++.h>
+using namespace std;
+typedef long long LL;
+const int N = 5e+5 + 10;
+
+int n, m, k;
+LL a[N];
+
+LL work(LL u, LL v)
+{
+    LL res = 0;
+    LL power = 1;
+    while (u || v)
+    {
+        LL du = u % k, dv = v % k;
+        LL sumBit = (du + dv) % k;
+        res += sumBit * power;
+
+        power = power * k;
+        u /= k, v /= k;
+    }
+    return res;
+}
+
+void deal1(int l, int r, LL v)
+{
+    for (int i = l; i <= r; i ++)
+        a[i] = work(a[i], v);
+}
+
+LL f(LL x)
+{
+    LL res = 0;
+    LL power = 1;
+
+    // pos 0
+    LL lowBit = x % k;
+    LL d0 = lowBit;
+    res += (lowBit + 1) * lowBit / 2 % k * power;
+    x /= k;
+    power *= k;
+
+    // pos j
+    while (x)
+    {
+        lowBit = x % k;
+        res += lowBit * (d0 + 1) % k * power;
+        x /= k;
+        power *= k;
+    }
+    return res;
+}
+
+LL deal2(int l, int r)
+{
+    LL res = 0;
+    for (int i = l; i <= r; i ++)
+    {
+        LL fai = f(a[i]);
+        res = work(res, fai);
+    }
+    return res;
+}
+
+int main()
+{
+    scanf("%d%d%d", &n, &m, &k);
+    for (int i = 1; i <= n; i ++) scanf("%lld", &a[i]);
+    for (int i = 0; i < m; i ++)
+    {
+        int op;
+        scanf("%d", &op);
+        if (op == 1)
+        {
+            int l, r;
+            LL v;
+            scanf("%d%d%lld", &l, &r, &v);
+            deal1(l, r, v);
+        }
+        else
+        {
+            int l, r;
+            scanf("%d%d", &l, &r);
+            LL res = deal2(l, r);
+            printf("%lld\n", res);
+        }
+    }
 }
 ```
