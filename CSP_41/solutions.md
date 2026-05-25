@@ -1,6 +1,6 @@
 # CSP(第41次CCF计算机软件能力认证)
 
-> smqyOJ Judge((10/10) + (22/22) + (23/23) + (13/25))
+> smqyOJ Judge((10/10) + (22/22) + (23/23) + (13/25) + (24/50))
 
 ## Q1 平衡数
 
@@ -11,7 +11,7 @@
 
 ### Q1 代码实现
 
-```C++
+```cpp
 #include <bits/stdc++.h>
 using namespace std;
 int n, ans;
@@ -54,7 +54,7 @@ int main()
 
 ### Q2 代码实现(demo1, WA)
 
-```C++
+```cpp
 #include <bits/stdc++.h>
 using namespace std;
 const int N = 210;
@@ -134,7 +134,7 @@ int main()
 
 ### Q2 代码实现(demo2, AC)
 
-```C++
+```cpp
 #include <bits/stdc++.h>
 using namespace std;
 const int N = 210;
@@ -216,7 +216,7 @@ int main()
 
 ### Q3 代码实现(demo1, subtask-40%)
 
-```C++
+```cpp
 #include <bits/stdc++.h>
 using namespace std;
 const int N = 8e+5 + 10;
@@ -320,7 +320,7 @@ int main()
 
 ### Q3 代码实现(demo2, subtask-80%)
 
-```C++
+```cpp
 #include <bits/stdc++.h>
 using namespace std;
 const int N = 8e+5 + 10;
@@ -465,7 +465,7 @@ int main()
 
 ### Q3 代码实现(demo3, AC)
 
-```C++
+```cpp
 #include <bits/stdc++.h>
 using namespace std;
 typedef long long LL;
@@ -608,7 +608,7 @@ int main()
 
 ### Q4 代码实现(demo1, TLE)
 
-```C++
+```cpp
 #include <bits/stdc++.h>
 using namespace std;
 typedef long long LL;
@@ -717,7 +717,7 @@ int main()
 
 ### Q4 代码实现(demo2, subtask1&2)
 
-```C++
+```cpp
 #include <bits/stdc++.h>
 using namespace std;
 typedef long long LL;
@@ -805,5 +805,170 @@ int main()
             printf("%lld\n", res);
         }
     }
+}
+```
+
+## Q5 旅游计划
+
+### Q5 算法思路(demo1, subtask1&2)
+
+- 由于题面中节点和边数的设定，该图便是树。
+- 构建好邻接表之后，利用 `dfs` 构建以节点 `1` 为根的树，同时维护每一个节点 `x` 的深度值 `dpt[x]` 和其对应的父节点 `p[x]`。
+- 对于旅行计划的可行性判定过程中，从计划的起始点和终点同时在构建的树上向上移动，直到移动至两节点的公共祖先节点为止。
+- 在移动的过程中，利用道路的翻修情况 `is_renovated[]` 和是否是维修站点 `st[x]` 来判定可行性。这里的备胎情况可以视作是个人资金 `pay`，起始资金为 1，每经过未翻修的道路，便会扣除资金值 1 个单位，若资金值出现了负值(直接宣布个人破产，计划失败)，若遇到维修站，你的个人资金便会自动充值到 1。
+- **LCA 缝合点的特判**: 
+  - 我们先穷举一下在 LCA 汇合时的 3 种情况：
+  - `pay1 = 1, pay2 = 1`：左段未遇到烂路，右半段也未遇到烂路。资金总消耗为 0，安全。
+  - `pay1 = 1, pay2 = 0` (或相反)：其中半段遇到了一条烂路，另半段未遇到烂路。资金总消耗 1，安全。
+  - `pay1 = 0, pay2 = 0`：左段遇到一条烂路(无资金可用)，右段也遇到一条烂路(无资金可用)。危险！
+  - 为什么要缝合(特判)？
+  - 因为在构建代码逻辑时，为了方便向上查找 LCA，采用的策略是"假装有两辆车"：第一辆车从起点 s 出发，带着 1 单位的资金，向上行进，第二辆车从终点 t 出发，带着 1 单位的资金，向上行进。如果两辆车都在半路用掉了自己的资金(`pay1=0, pay2=0`)，它们确实都能活着开到 LCA。但是！现实中只有一辆车、一个单位的资金！如果左半边需要 1 个单位的资金，右半边也需要 1 个单位的资金，加起来这条完整的路径就需要 2 个单位的资金，完全无中生有！所以这条路是死路。
+- 所以，唯一需要特判的情况就是 `pay1 == 0 && pay2 == 0` 或 `pay1 + pay2 < 1`
+- 该题解可以通过 smqyOJ (24/50)的测试点，得分 30 分
+
+### Q5 代码实现(demo1, subtask1&2)
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+typedef pair<int, int> PII;
+#define x first
+#define y second
+const int N = 1e+5 + 10;
+
+int n, X, lastans, k, m, q;
+bool st[N]; // 表示该城市是否有维修站
+PII tour[N];    // 旅行计划
+int h[N], e[N * 2], ne[N * 2], idx;
+int dpt[N], p[N];   // dpt[x] 标记节点所在树的深度，p[x] 标记节点所在树的父节点
+bool is_renovated[N];   // is_renovated[x] 标记节点 x 与其父节点 p[x] 之间的道路是否翻修过
+
+void add(int u, int v)
+{
+    e[idx] = v, ne[idx] = h[u], h[u] = idx ++;
+}
+
+void deal1(int u, int v)
+{
+    int du = dpt[u], dv = dpt[v];
+    if (du > dv)
+        is_renovated[u] = true;
+    else
+        is_renovated[v] = true;
+}
+
+int setPay(int pay, int p)   // 判定 node-p[node] 道路是否翻修，返回 pay 值
+{
+    if (is_renovated[p]) return pay;
+    else 
+    {
+        pay -= 1;
+        return pay;
+    }
+}
+
+bool check(int id)
+{
+    int p1 = tour[id].x, p2 = tour[id].y;
+
+    if (dpt[p1] > dpt[p2]) swap(p1, p2);    // 调节 p2 节点至更深
+    int pay1 = 1, pay2 = 1;
+    while (dpt[p1] != dpt[p2])  // 上移 p2
+    {
+        pay2 = setPay(pay2, p2);
+        if (pay2 < 0) return false; // 先判定是否死在半路，再行动 (Hack point)
+        p2 = p[p2];
+        if (st[p2]) pay2 = 1;   // 维修点 
+    }
+
+    if (p1 == p2) return true;
+    else
+    {
+        while (p1 != p2)
+        {
+            pay1 = setPay(pay1, p1);
+            if (pay1 < 0) return false; // 先判定是否死在半路，再行动 (Hack point)
+            p1 = p[p1];
+            if (st[p1]) pay1 = 1;   // 维修点
+            
+            pay2 = setPay(pay2, p2);
+            if (pay2 < 0) return false; // 先判定是否死在半路，再行动 (Hack point)
+            p2 = p[p2];
+            if (st[p2]) pay2 = 1;   // 维修点
+            
+        }
+        // LCA 缝合点的特判
+        if (pay1 + pay2 < 1) return false;  // (Bug point)
+    }
+    return true;
+}
+
+void deal2()
+{
+    int cnt = 0;
+    for (int i = 0; i < m; i ++)
+    {
+        bool flag = check(i);   // 判定第 i 份旅行计划
+        if (flag) cnt ++;
+    }
+    lastans = cnt;
+    printf("%d\n", cnt);
+}
+
+void dfs(int start, int father) // 构建树的结构，并同时维护 dpt[] 与 p[]
+{
+    dpt[start] = dpt[father] + 1, p[start] = father;
+    for (int i = h[start]; ~i; i = ne[i])
+    {
+        int j = e[i];
+        if (j == father) continue;
+        dfs(j, start);
+    }
+}
+
+int main()
+{
+    scanf("%d%d", &n, &X);
+    memset(h, -1, sizeof h);
+    for (int i = 0; i < n - 1; i ++)    // 读入道路信息
+    {
+        int u, v;
+        scanf("%d%d", &u, &v);
+        add(u, v), add(v, u);
+    }
+    dfs(1, 0);
+
+    scanf("%d", &k);
+    for (int i = 0; i < k; i ++)    // 读入维护站信息
+    {
+        int node;
+        scanf("%d", &node);
+        st[node] = true;
+    }
+    scanf("%d", &m);
+    for (int i = 0; i < m; i ++)    // 读入旅行计划信息
+    {
+        int s, t;
+        scanf("%d%d", &s, &t);
+        tour[i] = {s, t};
+    }
+    scanf("%d", &q);
+    for (int i = 0; i < q; i ++)    // 读入询问操作信息
+    {
+        int op;
+        scanf("%d", &op);
+        if (op == 1)
+        {
+            int u, v;
+            scanf("%d%d", &u, &v);
+            u = u ^ (X * lastans), v = v ^ (X * lastans);
+            deal1(u, v);
+        }
+        else
+        {
+            deal2();
+        }
+    }
+    return 0;
 }
 ```
