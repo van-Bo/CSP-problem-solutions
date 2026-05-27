@@ -342,3 +342,47 @@ int main()
     return 0;
 }
 ```
+
+## Q4 集体锻炼
+
+### Q4 算法思路(demo1, subtask1)
+
+- 题目要求求出所有区间 $[l, r]$ 的体育价值之和。最直观的方法就是枚举所有的左右端点 $l$ 和 $r$。如果直接写三个 `for` 循环(外两层枚举 $l$ 和 $r$，最内层再从 $l$ 到 $r$ 重新计算 $\gcd$)，时间复杂度会高达 $O(n^3)$，这在 $n=1000$ 时就会超时。
+- 优化点(滚动计算 $\gcd$)：当固定左端点 $l$，让右端点 $r$ 从 $l$ 开始逐步向右扩展时，区间 $[l, r]$ 的 $\gcd$ 其实就等于 区间 $[l, r-1]$ 的 $\gcd$ 与 $a_r$ 的最大公约数。即：$\gcd(a_l, \dots, a_r) = \gcd(\text{pre} \gcd, a_r)$。这样，只需要两层循环，一边向右扩展 $r$，一边维护当前的 $\gcd$，时间复杂度降为 $O(n^2)$。
+- 该题解可以通过 smqyOJ (7/40) 的测试点，得分 30 分
+
+### Q4 代码实现(demo1, subtask1)
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+typedef long long LL;
+const int N = 1e+6 + 10, mod = 998244353;
+
+int n;
+LL a[N];
+
+LL gcd(LL a, LL b)
+{
+    return b ? gcd(b, a % b) : a;
+}
+
+int main()
+{
+    scanf("%d", &n);
+    for (int i = 1; i <= n; i ++) scanf("%lld", &a[i]);
+
+    LL res = 0;
+    for (int l = 1; l <= n; l ++)
+    {
+        LL gcd_value = a[l];
+        for (int r = l; r <= n; r ++)
+        {
+            gcd_value = gcd(gcd_value, a[r]);
+            res += gcd_value * l * r;
+            res %= mod;
+        }
+    }
+    printf("%lld\n", res % mod);
+}
+```
