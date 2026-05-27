@@ -386,3 +386,131 @@ int main()
     printf("%lld\n", res % mod);
 }
 ```
+
+## Q5 收费标准评估
+
+### Q5 算法思路(demo1, subtask1&2)
+
+- `cost[x]` 表示以从节点 `x` 入园游览，游览范围为以 `k` 为根的子树的情况下，总费用的最大值
+- 预处理(`dfs`)： 利用深度优先搜索自底向上初始化 `cost` 数组。状态转移方程为：`cost[v] = a[v] + sum(max(0, cost[child]))`。只有当子树的总费用大于 `0` 时，才会将其纳入父节点的游览路线中。
+- `deal1(u)` 枚举以 `u` 为根的子树中每一个节点的 `cost` 值即可
+- `deal2(u, x)` 自下而上更新、维护 `cost`。在树形 `DP` 中，子节点 `u` 对父节点 `p[u]` 的真实贡献是 `max(0, cost[u])`(因为如果是负数，父节点将不会走到 `u` 这里)。当 `cost[u]` 发生变化时，它对父节点产生的影响(贡献值变化量)应该是：`差值 = 修改后的 max(0, cost[u]) - 修改前的 max(0, preCost)`。只要这个差值为 `0`，说明这次修改对上面没有任何影响，可以安心 `break` 提前结束；如果差值不为 `0`，就把这个差值加给父节点，然后继续向上爬。
+- 该题解可以通过 smqyOJ (15/30) 的测试点，得分 30 分
+
+### Q5 代码实现(demo1, subtask1&2)
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+const int N = 1e+5 + 10;
+typedef long long LL;
+
+int n, m;
+int h[N], e[N * 2], ne[N * 2], idx;
+int a[N];
+
+void add(int u, int v)
+{
+    e[idx] = v, ne[idx] = h[u], h[u] = idx ++;
+}
+
+int p[N];
+LL cost[N], max_cost = -1e+15;
+
+LL dfs(int v, int fa)
+{
+    p[v] = fa;
+    cost[v] = a[v];
+
+    for (int i = h[v]; ~i; i = ne[i])
+    {
+        int j = e[i];
+        if (j == fa) continue;
+        LL branch_cost = dfs(j, v);
+        if (branch_cost > 0) cost[v] += branch_cost;
+    }
+
+    max_cost = max(max_cost, cost[v]);
+    return cost[v];
+}
+
+void deal1(int u)
+{
+    LL max_cost_minitree = cost[u];
+    queue<int> nodes;
+    nodes.push(u);
+    
+    while (nodes.size())
+    {
+        int t = nodes.front();
+        nodes.pop();
+
+        for (int i = h[t]; ~i; i = ne[i])
+        {
+            int j = e[i];
+            if (j == p[t]) continue;
+            max_cost_minitree = max(max_cost_minitree, cost[j]);
+            nodes.push(j);
+        }
+    }
+    printf("%lld\n", max_cost_minitree);
+}
+
+void deal2(int u, LL x)
+{
+    LL delta_cost = x - a[u];
+    a[u] = x;
+
+    while (u != 0)
+    {
+        LL preCost = cost[u];
+        cost[u] += delta_cost;
+
+        if (u == 1) break;
+
+        // 节点 u 对其父节点 cnt 值的贡献大小的变化量
+        LL delta_contribution = max(0LL, cost[u]) - max(0LL, preCost);
+        // 如果贡献没变(截断效应)，停止向上传递
+        if (delta_contribution == 0) break;
+        
+        delta_cost = delta_contribution;
+        u = p[u];
+    }
+    printf("%lld\n", cost[1]);
+}
+
+int main()
+{
+    scanf("%d%d", &n, &m);
+    for (int i = 1; i <= n; i ++) scanf("%d", &a[i]);
+    memset(h, -1, sizeof h);
+    for (int i = 0; i < n - 1; i ++)
+    {
+        int u, v;
+        scanf("%d%d", &u, &v);
+        add(u, v), add(v, u);
+    }
+    dfs(1, 0);
+    printf("%lld\n", cost[1]);
+
+    for (int i = 0; i < m; i ++)
+    {
+        int op;
+        scanf("%d", &op);
+        if (op == 1)
+        {
+            int u;
+            scanf("%d", &u);
+            deal1(u);
+        }
+        else
+        {
+            int u;
+            LL x;
+            scanf("%d%lld", &u, &x);
+            deal2(u, x);
+        }
+    }
+    return 0;
+}
+```
