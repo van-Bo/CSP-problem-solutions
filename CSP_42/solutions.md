@@ -1,7 +1,7 @@
 # CSP(第42次CCF计算机软件能力认证)
 
-> smqyOJ Judge((10/10) + (22/22) + (11/28) + (11/42))
-> CCF CSP(100 + 100 + 40 + 30)
+> smqyOJ Judge((10/10) + (22/22) + (11/28) + (21/42))
+> CCF CSP(100 + 100 + 40 + 60)
 
 ## Q1 银行家舍入
 
@@ -328,6 +328,72 @@ int main()
             else break;
         }
 
+        printf("%d\n", cnt);
+    }
+    return 0;
+}
+```
+
+### Q4 算法思路(demo2, subtask1&2)
+
+- 在 `demo1` 的纯暴力算法中，每次处理查询 $[l, r]$ 时，都需要在区间内反复通过双重 `for` 循环寻找"最早合法的右端点"。考虑到仓库数组 `b` 在整个生命周期中是静态不修改的，同一段区间的答案无论被查询多少次都不会改变。可以引入动态规划(DP)思想，在查询开始前，花一次性的时间将所有的"最优切割点"预处理出来，实现查询时的 $O(1)$ 查表跳跃。
+- `R[i]` 数组是局部最优解：强制以第 `i` 个仓库作为起点，向后能够找到的最早合法结束位置(即 $b_i \oplus b_{i+2} \dots = 0$ 成立的最小下标)。若找不到则记为无穷大 `INF`。
+- `nxt[i]` 数组是全局最优解：在所有大于等于 `i` 的可能起点中，能够产生的全局最早合法右端点。
+- 状态转移方程：`nxt[i] = min(R[i], nxt[i + 1])`：既然可以跳过某些必输的元素，那么在 $\ge i$ 的范围内，最优切法只有两种可能：要么以当前的 `i` 作为起点切(对应 `R[i]`)，要么把 `i` 当作废块抛弃，沿用 `i + 1` 往后的最优切法(对应 nxt[i + 1])。
+- 时间复杂度: $O(n^2 + q \times n)$
+- 该题解可以通过 smqyOJ (21/42) 的测试点，得分 60 分
+
+### Q4 代码实现(demo2, subtask1&2)
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+const int inf = 1e+6 + 1;
+const int N = 1e+6 + 10;
+
+int n, q;
+int l, r;
+int b[N];
+int R[N];	// R[i] 表示严格以 i 为左端点，最早合法的右端点，
+int nxt[N];	// nxt[i] 表示左端点 >= i 的范围里，最早合法的右端点
+
+int main()
+{
+    scanf("%d%d", &n, &q);
+    for (int i = 1; i <= n; i ++) scanf("%d", &b[i]);
+
+    // 预处理 R[]
+    for (int i = 1; i <= n; i ++)
+    {
+        R[i] = inf;
+        int xor_sum = 0;
+        for (int j = i; j <= n; j += 2)
+        {
+            xor_sum ^= b[j];
+            if (xor_sum == 0)
+            {
+                R[i] = j;
+                break;
+            }
+        }
+    }
+
+	// 预处理 nxt[]
+    nxt[n + 1] =  inf;
+    for (int i = n; i >= 1; i --)
+        nxt[i] = min(R[i], nxt[i + 1]);	// 状态转移: 要么用当前 i 为起点的最优解，要么用 i 之后的最优解
+
+    while (q --)
+    {
+        int cnt = 0;
+        scanf("%d%d", &l, &r);
+
+        int cur = l;
+        while (cur <= r && nxt[cur] <= r)
+        {
+            cnt ++;
+            cur = nxt[cur] + 1;
+        }
         printf("%d\n", cnt);
     }
     return 0;
