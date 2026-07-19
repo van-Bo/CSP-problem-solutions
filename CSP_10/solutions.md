@@ -1,6 +1,44 @@
 # 第10次CCF计算机软件能力认证
 
-> smqyOJ Judge((), (), (), (20/20))
+> smqyOJ Judge((10/10), (), (), (20/20))
+
+## Q1 分蛋糕
+
+### Q1 算法思路
+
+- 模拟即可，注意最后一个分到蛋糕的人，其所持有的蛋糕重量不一定满足 $\geqslant k$
+- 该题解可以通过 smqyOJ (10/10)的测试点，得分 100 分
+
+### Q1 代码实现
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+const int N = 1010;
+
+int n, k;
+int a[N];
+
+int main()
+{
+    scanf("%d%d", &n, &k);
+    for (int i = 0; i < n; i ++) scanf("%d", &a[i]);
+
+    int cnt = 0, temp = 0;
+    for (int i = 0; i < n; i ++)
+    {
+        temp += a[i];
+        if (temp >= k)
+        {
+            cnt ++;
+            temp = 0;
+        }
+    }
+    if (temp > 0) cnt += 1;
+    printf("%d\n", cnt);
+    return 0;
+}
+```
 
 ## Q4 地铁修建
 
